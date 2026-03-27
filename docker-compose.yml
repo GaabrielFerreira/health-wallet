@@ -1,0 +1,58 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: healthwallet-db
+    environment:
+      POSTGRES_DB: healthwallet
+      POSTGRES_USER: healthwallet
+      POSTGRES_PASSWORD: healthwallet123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - healthwallet-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U healthwallet"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: healthwallet-backend
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/healthwallet
+      SPRING_DATASOURCE_USERNAME: healthwallet
+      SPRING_DATASOURCE_PASSWORD: healthwallet123
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - healthwallet-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: healthwallet-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend/src:/app/src
+    depends_on:
+      - backend
+    networks:
+      - healthwallet-network
+
+networks:
+  healthwallet-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

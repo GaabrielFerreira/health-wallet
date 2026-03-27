@@ -1,0 +1,23 @@
+# Ambiente
+.env
+.env.local
+.env.development
+.env.production
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
+
+# Logs
+*.log
+logs/

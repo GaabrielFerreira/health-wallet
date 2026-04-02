@@ -10,9 +10,79 @@ function maskCPF(value: string): string {
     .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
 }
 
+function isValidCPF(cpf: string): boolean {
+  const digits = cpf.replace(/\D/g, "");
+  if (digits.length !== 11) return false;
+  if (/^(\d)\1{10}$/.test(digits)) return false;
+
+  let sum = 0;
+  for (let i = 0; i < 9; i++) sum += parseInt(digits[i]) * (10 - i);
+  let remainder = (sum * 10) % 11;
+  if (remainder === 10 || remainder === 11) remainder = 0;
+  if (remainder !== parseInt(digits[9])) return false;
+
+  sum = 0;
+  for (let i = 0; i < 10; i++) sum += parseInt(digits[i]) * (11 - i);
+  remainder = (sum * 10) % 11;
+  if (remainder === 10 || remainder === 11) remainder = 0;
+  return remainder === parseInt(digits[10]);
+}
+
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+type FormFields = {
+  name: string;
+  cpf: string;
+  birthDate: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+  role: string;
+};
+
+type FormErrors = Partial<Record<keyof FormFields, string>>;
+
+function validate(form: FormFields): FormErrors {
+  const errors: FormErrors = {};
+
+  if (!form.name.trim()) errors.name = "Nome é obrigatório.";
+
+  if (!form.cpf.trim()) {
+    errors.cpf = "CPF é obrigatório.";
+  } else if (!isValidCPF(form.cpf)) {
+    errors.cpf = "CPF inválido.";
+  }
+
+  if (!form.birthDate) errors.birthDate = "Data de nascimento é obrigatória.";
+
+  if (!form.email.trim()) {
+    errors.email = "E-mail é obrigatório.";
+  } else if (!isValidEmail(form.email)) {
+    errors.email = "Formato de e-mail inválido.";
+  }
+
+  if (!form.role) errors.role = "Selecione um perfil.";
+
+  if (!form.password) {
+    errors.password = "Senha é obrigatória.";
+  } else if (form.password.length < 6) {
+    errors.password = "A senha deve ter no mínimo 6 caracteres.";
+  }
+
+  if (!form.confirmPassword) {
+    errors.confirmPassword = "Confirmação de senha é obrigatória.";
+  } else if (form.confirmPassword !== form.password) {
+    errors.confirmPassword = "As senhas não coincidem.";
+  }
+
+  return errors;
+}
+
 export function RegisterPage() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<FormFields>({
     name: "",
     cpf: "",
     birthDate: "",
@@ -21,22 +91,38 @@ export function RegisterPage() {
     confirmPassword: "",
     role: "",
   });
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [submitted, setSubmitted] = useState(false);
 
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) {
     const { name, value } = e.target;
-    if (name === "cpf") {
-      setForm({ ...form, cpf: maskCPF(value) });
-      return;
-    }
-    setForm({ ...form, [name]: value });
+    const updated = {
+      ...form,
+      [name]: name === "cpf" ? maskCPF(value) : value,
+    };
+    setForm(updated);
+    if (submitted) setErrors(validate(updated));
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.SyntheticEvent) {
     e.preventDefault();
+    setSubmitted(true);
+    const validationErrors = validate(form);
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
     // TODO: integrar com backend
   }
+
+  const inputClass = (field: keyof FormFields) =>
+    `w-full border rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 transition ${
+      errors[field]
+        ? "border-red-400 focus:ring-red-300 focus:border-red-400"
+        : "border-gray-300 focus:ring-purple-400 focus:border-purple-400"
+    }`;
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4 py-10">
@@ -60,7 +146,7 @@ export function RegisterPage() {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Nome completo
@@ -70,8 +156,9 @@ export function RegisterPage() {
               name="name"
               value={form.name}
               onChange={handleChange}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 transition"
+              className={inputClass("name")}
             />
+            {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
           </div>
 
           <div>
@@ -84,8 +171,9 @@ export function RegisterPage() {
               value={form.cpf}
               onChange={handleChange}
               placeholder="000.000.000-00"
-              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 transition"
+              className={inputClass("cpf")}
             />
+            {errors.cpf && <p className="text-red-500 text-xs mt-1">{errors.cpf}</p>}
           </div>
 
           <div>
@@ -97,8 +185,9 @@ export function RegisterPage() {
               name="birthDate"
               value={form.birthDate}
               onChange={handleChange}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 transition"
+              className={inputClass("birthDate")}
             />
+            {errors.birthDate && <p className="text-red-500 text-xs mt-1">{errors.birthDate}</p>}
           </div>
 
           <div>
@@ -111,8 +200,9 @@ export function RegisterPage() {
               value={form.email}
               onChange={handleChange}
               placeholder="seu@email.com"
-              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 transition"
+              className={inputClass("email")}
             />
+            {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
           </div>
 
           <div>
@@ -123,12 +213,13 @@ export function RegisterPage() {
               name="role"
               value={form.role}
               onChange={handleChange}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 transition bg-white text-gray-700"
+              className={`${inputClass("role")} bg-white text-gray-700`}
             >
               <option value="" disabled>Selecione o perfil</option>
               <option value="paciente">Paciente</option>
               <option value="medico">Médico</option>
             </select>
+            {errors.role && <p className="text-red-500 text-xs mt-1">{errors.role}</p>}
           </div>
 
           <div>
@@ -141,8 +232,9 @@ export function RegisterPage() {
               value={form.password}
               onChange={handleChange}
               placeholder="Mínimo 6 caracteres"
-              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 transition"
+              className={inputClass("password")}
             />
+            {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
           </div>
 
           <div>
@@ -154,8 +246,9 @@ export function RegisterPage() {
               name="confirmPassword"
               value={form.confirmPassword}
               onChange={handleChange}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 transition"
+              className={inputClass("confirmPassword")}
             />
+            {errors.confirmPassword && <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>}
           </div>
 
           <button

@@ -1,19 +1,53 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+type LoginErrors = { email?: string; password?: string };
+
 export function LoginPage() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({ email: "", password: "" });
+  const [errors, setErrors] = useState<LoginErrors>({});
+  const [submitted, setSubmitted] = useState(false);
+
+  function validate(data: typeof form): LoginErrors {
+    const errs: LoginErrors = {};
+    if (!data.email.trim()) {
+      errs.email = "E-mail é obrigatório.";
+    } else if (!isValidEmail(data.email)) {
+      errs.email = "Formato de e-mail inválido.";
+    }
+    if (!data.password) errs.password = "Senha é obrigatória.";
+    return errs;
+  }
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const updated = { ...form, [e.target.name]: e.target.value };
+    setForm(updated);
+    if (submitted) setErrors(validate(updated));
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.SyntheticEvent) {
     e.preventDefault();
+    setSubmitted(true);
+    const validationErrors = validate(form);
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
     // TODO: integrar com backend
   }
+
+  const inputClass = (field: keyof LoginErrors) =>
+    `w-full border rounded-lg px-4 py-3 text-sm outline-none focus:ring-2 transition ${
+      errors[field]
+        ? "border-red-400 focus:ring-red-300 focus:border-red-400"
+        : "border-gray-300 focus:ring-purple-400 focus:border-purple-400"
+    }`;
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
@@ -38,7 +72,7 @@ export function LoginPage() {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-5" noValidate>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Email
@@ -49,8 +83,9 @@ export function LoginPage() {
               value={form.email}
               onChange={handleChange}
               placeholder="seu@email.com"
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 transition"
+              className={inputClass("email")}
             />
+            {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
           </div>
 
           <div>
@@ -64,7 +99,7 @@ export function LoginPage() {
                 value={form.password}
                 onChange={handleChange}
                 placeholder="••••••••"
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 transition pr-11"
+                className={`${inputClass("password")} pr-11`}
               />
               <button
                 type="button"
@@ -84,6 +119,7 @@ export function LoginPage() {
                 )}
               </button>
             </div>
+            {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
           </div>
 
           <button

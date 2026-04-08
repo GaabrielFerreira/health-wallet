@@ -36,7 +36,7 @@ Não é necessário instalar Java, Node.js ou PostgreSQL — tudo roda dentro do
 
 ```bash
 # 1. Clone o repositório
-git clone https://github.com/GaabrielFerreira/health-wallet.git
+git clone https://github.com/software-eng-2026S1/health-wallet.git
 cd health-wallet
 
 # 2. Suba os containers

@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.util.HashMap;
 import java.util.Map;
 
+
+
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -34,5 +36,23 @@ public class GlobalExceptionHandler {
         body.put("erro", ex.getMessage());
 
         return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+    }
+
+    @ExceptionHandler(AnamnesisAlreadyExistsException.class)
+    public ResponseEntity<Map<String, Object>> handleAnamnesisConflict(AnamnesisAlreadyExistsException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("status", 409);
+        body.put("erro", ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+    }
+
+    @ExceptionHandler(PatientNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handlePatientNotFound(PatientNotFoundException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("status", 404);
+        body.put("erro", ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
     }
 }

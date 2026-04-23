@@ -21,7 +21,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/users/register").permitAll()
                 .requestMatchers("/api/vaccines").permitAll()
-                .requestMatchers("/api/anamnesis").permitAll()
+                .requestMatchers("/api/anamnesis", "/api/anamnesis/**").permitAll()
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 .requestMatchers("/error").permitAll()
                 .anyRequest().authenticated()

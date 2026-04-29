@@ -13,7 +13,9 @@ import com.healthwallet.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -70,6 +72,24 @@ public class AnamnesisService {
                 anamnesis.getFamilyHistory(),
                 anamnesis.getObservations()
         );
+    }
+
+    public List<AnamnesisResponse> listByPatientId(UUID patientId) {
+        userRepository.findById(patientId)
+                .orElseThrow(() -> new PatientNotFoundException(patientId));
+
+        return anamnesisRepository.findAllByPatientId(patientId).stream()
+                .map(a -> new AnamnesisResponse(
+                        a.getId(),
+                        a.getPatient().getId(),
+                        a.getAllergies(),
+                        a.getChronicDiseases(),
+                        a.getMedications(),
+                        a.getBloodType(),
+                        a.getFamilyHistory(),
+                        a.getObservations()
+                ))
+                .collect(Collectors.toList());
     }
 
     public AnamnesisResponse update(UUID patientId, AnamnesisUpdateRequest request) {

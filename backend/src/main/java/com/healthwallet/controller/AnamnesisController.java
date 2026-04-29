@@ -16,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -53,6 +54,17 @@ public class AnamnesisController {
     @GetMapping("/{patientId}")
     public ResponseEntity<AnamnesisResponse> getByPatientId(@PathVariable UUID patientId) {
         return ResponseEntity.ok(anamnesisService.getByPatientId(patientId));
+    }
+
+    @Operation(summary = "Listar anamneses do paciente", description = "Retorna todas as anamneses vinculadas a um paciente")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso"),
+        @ApiResponse(responseCode = "404", description = "Paciente não encontrado",
+            content = @Content(schema = @Schema(implementation = Object.class)))
+    })
+    @GetMapping("/pacientes/{patientId}/anamneses")
+    public ResponseEntity<List<AnamnesisResponse>> listByPatientId(@PathVariable UUID patientId) {
+        return ResponseEntity.ok(anamnesisService.listByPatientId(patientId));
     }
 
     @Operation(summary = "Editar anamnese", description = "Atualiza a anamnese de um paciente pelo ID do paciente")

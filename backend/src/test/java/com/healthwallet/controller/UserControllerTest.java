@@ -6,6 +6,7 @@ import com.healthwallet.dto.RegisterResponse;
 import com.healthwallet.exception.EmailAlreadyExistsException;
 import com.healthwallet.model.Role;
 import com.healthwallet.security.SecurityConfig;
+import com.healthwallet.security.UserDetailsServiceImpl;
 import com.healthwallet.service.AuthService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +35,9 @@ class UserControllerTest {
 
     @MockBean
     private AuthService authService;
+
+    @MockBean
+    private UserDetailsServiceImpl userDetailsService;
 
     @Test
     void register_returns201_whenRequestIsValid() throws Exception {

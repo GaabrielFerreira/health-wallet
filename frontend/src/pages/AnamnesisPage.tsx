@@ -1,5 +1,6 @@
 import { useState } from "react";
-import axios from "axios";
+import { api } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 const BLOOD_TYPES = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 const ACTIVITY_LEVELS = ["Sedentário", "Leve", "Moderado", "Intenso"];
@@ -34,6 +35,7 @@ function validate(form: FormFields): FormErrors {
 type FeedbackState = "idle" | "loading" | "success" | "error";
 
 export function AnamnesisPage() {
+  const { user, logout } = useAuth();
   const [form, setForm] = useState<FormFields>({
     bloodType: "",
     weight: "",
@@ -96,8 +98,7 @@ export function AnamnesisPage() {
 
     setFeedback("loading");
     try {
-      await axios.post("/api/anamnesis", {
-        // TODO: substituir pelo patientId real vindo do contexto de autenticação
+      await api.post("/anamnesis", {
         patientId: null,
         bloodType: form.bloodType,
         allergies: form.allergies,
@@ -151,12 +152,22 @@ export function AnamnesisPage() {
         {/* User */}
         <div className="px-4 py-4 border-t border-gray-700 flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-            JS
+            {user?.name?.slice(0, 2).toUpperCase() ?? "??"}
           </div>
-          <div className="overflow-hidden">
-            <p className="text-white text-xs font-medium truncate">João Silva</p>
-            <p className="text-gray-400 text-xs truncate">joao@email.com</p>
+          <div className="overflow-hidden flex-1">
+            <p className="text-white text-xs font-medium truncate">{user?.name}</p>
+            <p className="text-gray-400 text-xs truncate">{user?.email}</p>
           </div>
+          <button
+            type="button"
+            onClick={logout}
+            title="Sair"
+            className="text-gray-400 hover:text-white transition flex-shrink-0"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1" />
+            </svg>
+          </button>
         </div>
       </aside>
 

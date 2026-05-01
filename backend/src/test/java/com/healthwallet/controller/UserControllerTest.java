@@ -5,9 +5,14 @@ import com.healthwallet.dto.RegisterRequest;
 import com.healthwallet.dto.RegisterResponse;
 import com.healthwallet.exception.EmailAlreadyExistsException;
 import com.healthwallet.model.Role;
+import com.healthwallet.security.JwtAuthFilter;
 import com.healthwallet.security.SecurityConfig;
 import com.healthwallet.security.UserDetailsServiceImpl;
 import com.healthwallet.service.AuthService;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -19,6 +24,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -38,6 +44,17 @@ class UserControllerTest {
 
     @MockBean
     private UserDetailsServiceImpl userDetailsService;
+
+    @MockBean
+    private JwtAuthFilter jwtAuthFilter;
+
+    @BeforeEach
+    void setUp() throws Exception {
+        doAnswer(inv -> {
+            ((FilterChain) inv.getArgument(2)).doFilter(inv.getArgument(0), inv.getArgument(1));
+            return null;
+        }).when(jwtAuthFilter).doFilter(any(ServletRequest.class), any(ServletResponse.class), any(FilterChain.class));
+    }
 
     @Test
     void register_returns201_whenRequestIsValid() throws Exception {

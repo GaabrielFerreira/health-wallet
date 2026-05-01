@@ -1,19 +1,28 @@
 package com.healthwallet.service;
 
+import com.healthwallet.dto.LoginRequest;
+import com.healthwallet.dto.LoginResponse;
 import com.healthwallet.dto.RegisterRequest;
 import com.healthwallet.dto.RegisterResponse;
 import com.healthwallet.exception.EmailAlreadyExistsException;
 import com.healthwallet.model.Role;
 import com.healthwallet.model.User;
 import com.healthwallet.repository.UserRepository;
+import com.healthwallet.security.JwtService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -25,18 +34,18 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
 
-    @Mock
-    private UserRepository userRepository;
-
-    @Mock
-    private PasswordEncoder passwordEncoder;
+    @Mock private UserRepository userRepository;
+    @Mock private PasswordEncoder passwordEncoder;
+    @Mock private AuthenticationManager authenticationManager;
+    @Mock private JwtService jwtService;
+    @Mock private UserDetailsService userDetailsService;
 
     @InjectMocks
     private AuthService authService;
 
     @Test
     void register_returnsResponse_whenEmailIsNew() {
-        RegisterRequest request = buildRequest("João", "joao@email.com", "12345678901", "senha123", Role.PATIENT);
+        RegisterRequest request = buildRegisterRequest("João", "joao@email.com", "12345678901", "senha123", Role.PATIENT);
 
         User saved = new User();
         saved.setName(request.getName());
@@ -54,7 +63,7 @@ class AuthServiceTest {
 
     @Test
     void register_encodesPassword_beforeSaving() {
-        RegisterRequest request = buildRequest("João", "joao@email.com", "12345678901", "senha123", Role.PATIENT);
+        RegisterRequest request = buildRegisterRequest("João", "joao@email.com", "12345678901", "senha123", Role.PATIENT);
 
         when(userRepository.existsByEmail(anyString())).thenReturn(false);
         when(passwordEncoder.encode("senha123")).thenReturn("hashed");
@@ -69,7 +78,7 @@ class AuthServiceTest {
 
     @Test
     void register_throwsEmailAlreadyExists_whenEmailIsTaken() {
-        RegisterRequest request = buildRequest("João", "joao@email.com", "12345678901", "senha123", Role.PATIENT);
+        RegisterRequest request = buildRegisterRequest("João", "joao@email.com", "12345678901", "senha123", Role.PATIENT);
 
         when(userRepository.existsByEmail(request.getEmail())).thenReturn(true);
 
@@ -82,7 +91,7 @@ class AuthServiceTest {
 
     @Test
     void register_setsCorrectRole() {
-        RegisterRequest request = buildRequest("Dra. Ana", "ana@email.com", "98765432100", "senha123", Role.DOCTOR);
+        RegisterRequest request = buildRegisterRequest("Dra. Ana", "ana@email.com", "98765432100", "senha123", Role.DOCTOR);
 
         when(userRepository.existsByEmail(anyString())).thenReturn(false);
         when(passwordEncoder.encode(anyString())).thenReturn("hashed");
@@ -95,7 +104,34 @@ class AuthServiceTest {
         assertThat(captor.getValue().getRole()).isEqualTo(Role.DOCTOR);
     }
 
-    private RegisterRequest buildRequest(String name, String email, String cpf, String password, Role role) {
+    @Test
+    void login_returnsTokenAndUserInfo_whenCredentialsAreValid() {
+        LoginRequest request = new LoginRequest();
+        request.setEmail("joao@email.com");
+        request.setPassword("senha123");
+
+        User user = new User();
+        user.setName("João");
+        user.setEmail("joao@email.com");
+        user.setRole(Role.PATIENT);
+
+        UserDetails userDetails = new org.springframework.security.core.userdetails.User(
+                "joao@email.com", "hashed", List.of()
+        );
+
+        when(userRepository.findByEmail("joao@email.com")).thenReturn(Optional.of(user));
+        when(userDetailsService.loadUserByUsername("joao@email.com")).thenReturn(userDetails);
+        when(jwtService.generateToken(userDetails)).thenReturn("jwt-token");
+
+        LoginResponse response = authService.login(request);
+
+        assertThat(response.getToken()).isEqualTo("jwt-token");
+        assertThat(response.getEmail()).isEqualTo("joao@email.com");
+        assertThat(response.getRole()).isEqualTo(Role.PATIENT);
+        verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
+    }
+
+    private RegisterRequest buildRegisterRequest(String name, String email, String cpf, String password, Role role) {
         RegisterRequest request = new RegisterRequest();
         request.setName(name);
         request.setEmail(email);

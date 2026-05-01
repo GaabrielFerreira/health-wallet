@@ -1,18 +1,31 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({ email: "", password: "" });
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setForm({ ...form, [e.target.name]: e.target.value });
+    setError("");
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.SyntheticEvent) {
     e.preventDefault();
-    // TODO: integrar com backend
+    setLoading(true);
+    try {
+      await login(form.email, form.password);
+      navigate("/anamnese");
+    } catch {
+      setError("Email ou senha inválidos.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -86,11 +99,16 @@ export function LoginPage() {
             </div>
           </div>
 
+          {error && (
+            <p className="text-red-500 text-sm text-center -mt-1">{error}</p>
+          )}
+
           <button
             type="submit"
-            className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 rounded-lg transition text-sm"
+            disabled={loading}
+            className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white font-semibold py-3 rounded-lg transition text-sm"
           >
-            Entrar
+            {loading ? "Entrando..." : "Entrar"}
           </button>
         </form>
 

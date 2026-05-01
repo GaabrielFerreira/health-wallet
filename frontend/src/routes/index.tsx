@@ -2,6 +2,13 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import { LoginPage } from "../pages/LoginPage";
 import { RegisterPage } from "../pages/RegisterPage";
 import { AnamnesisPage } from "../pages/AnamnesisPage";
+import { useAuth } from "../context/AuthContext";
+import type { ReactNode } from "react";
+
+function PrivateRoute({ children }: { children: ReactNode }) {
+  const { isAuthenticated } = useAuth();
+  return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
+}
 
 export function AppRoutes() {
   return (
@@ -10,7 +17,14 @@ export function AppRoutes() {
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/cadastro" element={<RegisterPage />} />
-        <Route path="/anamnese" element={<AnamnesisPage />} />
+        <Route
+          path="/anamnese"
+          element={
+            <PrivateRoute>
+              <AnamnesisPage />
+            </PrivateRoute>
+          }
+        />
       </Routes>
     </Router>
   );

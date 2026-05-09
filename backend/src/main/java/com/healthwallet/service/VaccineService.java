@@ -9,12 +9,35 @@ import com.healthwallet.repository.VaccineRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 public class VaccineService {
 
     private final VaccineRepository vaccineRepository;
     private final UserRepository userRepository;
+
+    public List<VaccineResponse> listByPatientId(UUID patientId) {
+        userRepository.findById(patientId)
+                .orElseThrow(() -> new PatientNotFoundException(patientId));
+
+        return vaccineRepository.findByPatientId(patientId).stream()
+                .map(v -> new VaccineResponse(
+                        v.getId(),
+                        v.getPatient().getId(),
+                        v.getName(),
+                        v.getManufacturer(),
+                        v.getLot(),
+                        v.getApplicationDate(),
+                        v.getDose(),
+                        v.getProof(),
+                        v.getObservations()
+                ))
+                .collect(Collectors.toList());
+    }
 
     public VaccineResponse create(VaccineRequest request) {
         var patient = userRepository.findById(request.getPatientId())

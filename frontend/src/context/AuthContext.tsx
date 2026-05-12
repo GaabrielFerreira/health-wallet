@@ -4,6 +4,7 @@ import { api } from "../services/api";
 type Role = "PATIENT" | "DOCTOR" | "ADMIN";
 
 type AuthUser = {
+  id: string;
   name: string;
   email: string;
   role: Role;
@@ -33,7 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function login(email: string, password: string) {
     const { data } = await api.post("/auth/login", { email, password });
 
-    const authUser: AuthUser = { name: data.name, email: data.email, role: data.role };
+    const authUser: AuthUser = { id: data.id, name: data.name, email: data.email, role: data.role };
     localStorage.setItem("token", data.token);
     localStorage.setItem("user", JSON.stringify(authUser));
     setUser(authUser);

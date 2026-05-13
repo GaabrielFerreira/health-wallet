@@ -1,0 +1,64 @@
+package com.healthwallet.service;
+
+import com.healthwallet.dto.AppointmentRequest;
+import com.healthwallet.dto.AppointmentResponse;
+import com.healthwallet.exception.PatientNotFoundException;
+import com.healthwallet.model.Appointment;
+import com.healthwallet.model.User;
+import com.healthwallet.repository.AppointmentRepository;
+import com.healthwallet.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+public class AppointmentService {
+
+    private final AppointmentRepository appointmentRepository;
+    private final UserRepository userRepository;
+
+    public AppointmentResponse create(AppointmentRequest request) {
+        User patient = userRepository.findById(request.getPatientId())
+                .orElseThrow(() -> new PatientNotFoundException(request.getPatientId()));
+
+        Appointment appointment = new Appointment();
+        appointment.setPatient(patient);
+        appointment.setDate(request.getDate());
+        appointment.setSpecialty(request.getSpecialty());
+        appointment.setProfessional(request.getProfessional());
+        appointment.setClinic(request.getClinic());
+        appointment.setSummary(request.getSummary());
+        appointment.setPrescription(request.getPrescription());
+        appointment.setMedicalObservation(request.getMedicalObservation());
+
+        Appointment saved = appointmentRepository.save(appointment);
+        return toResponse(saved);
+    }
+
+    public List<AppointmentResponse> listByPatientId(UUID patientId) {
+        userRepository.findById(patientId)
+                .orElseThrow(() -> new PatientNotFoundException(patientId));
+
+        return appointmentRepository.findAllByPatientId(patientId).stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    private AppointmentResponse toResponse(Appointment a) {
+        return new AppointmentResponse(
+                a.getId(),
+                a.getPatient().getId(),
+                a.getDate(),
+                a.getSpecialty(),
+                a.getProfessional(),
+                a.getClinic(),
+                a.getSummary(),
+                a.getPrescription(),
+                a.getMedicalObservation()
+        );
+    }
+}

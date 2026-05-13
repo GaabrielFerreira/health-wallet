@@ -3,6 +3,7 @@ import { LoginPage } from "../pages/LoginPage";
 import { RegisterPage } from "../pages/RegisterPage";
 import { AnamnesisPage } from "../pages/AnamnesisPage";
 import { LandingPage } from "../pages/LandingPage";
+import { VaccinesPage } from "../pages/VaccinesPage";
 import { useAuth } from "../context/AuthContext";
 import type { ReactNode } from "react";
 
@@ -23,6 +24,14 @@ export function AppRoutes() {
           element={
             <PrivateRoute>
               <AnamnesisPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/vacinas"
+          element={
+            <PrivateRoute>
+              <VaccinesPage />
             </PrivateRoute>
           }
         />

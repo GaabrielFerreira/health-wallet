@@ -38,7 +38,7 @@ const EMPTY_FORM = {
 };
 
 export function VaccinesPage() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [vaccines, setVaccines] = useState<Vaccine[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

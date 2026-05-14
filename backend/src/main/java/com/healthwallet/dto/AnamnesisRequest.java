@@ -22,4 +22,16 @@ public class AnamnesisRequest {
     private String familyHistory;
 
     private String observations;
+
+    private Double weight;
+
+    private Double height;
+
+    private String previousSurgeries;
+
+    private Boolean smoker;
+
+    private String physicalActivity;
+
+    private String alcoholConsumption;
 }

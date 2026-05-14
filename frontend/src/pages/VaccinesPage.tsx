@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { NavLink } from "react-router-dom";
 import { api } from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import { Sidebar } from "../components/Sidebar";
 
 type Dose = "FIRST" | "SECOND" | "BOOSTER";
 
@@ -112,64 +112,7 @@ export function VaccinesPage() {
 
   return (
     <div className="flex min-h-screen bg-gray-100">
-      {/* Sidebar */}
-      <aside className="w-52 bg-gray-900 flex flex-col flex-shrink-0">
-        <div className="flex items-center gap-2 px-5 py-5">
-          <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 20.364l-7.682-7.682a4.5 4.5 0 010-6.364z" />
-          </svg>
-          <span className="text-white font-semibold text-sm">Health Wallet</span>
-        </div>
-
-        <nav className="flex-1 px-3 py-2 space-y-1">
-          <NavLink
-            to="/anamnese"
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${
-                isActive ? "bg-purple-600 text-white" : "text-gray-300 hover:bg-gray-800"
-              }`
-            }
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
-            Anamnese
-          </NavLink>
-          <NavLink
-            to="/vacinas"
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${
-                isActive ? "bg-purple-600 text-white" : "text-gray-300 hover:bg-gray-800"
-              }`
-            }
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-            </svg>
-            Vacinas
-          </NavLink>
-        </nav>
-
-        <div className="px-4 py-4 border-t border-gray-700 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-            {user?.name?.slice(0, 2).toUpperCase() ?? "??"}
-          </div>
-          <div className="overflow-hidden flex-1">
-            <p className="text-white text-xs font-medium truncate">{user?.name}</p>
-            <p className="text-gray-400 text-xs truncate">{user?.email}</p>
-          </div>
-          <button
-            type="button"
-            onClick={logout}
-            title="Sair"
-            className="text-gray-400 hover:text-white transition flex-shrink-0"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1" />
-            </svg>
-          </button>
-        </div>
-      </aside>
+      <Sidebar />
 
       {/* Main */}
       <div className="flex-1 flex flex-col overflow-hidden">

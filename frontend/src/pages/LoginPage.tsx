@@ -20,7 +20,7 @@ export function LoginPage() {
     setLoading(true);
     try {
       await login(form.email, form.password);
-      navigate("/anamnese");
+      navigate("/dashboard");
     } catch {
       setError("Email ou senha inválidos.");
     } finally {

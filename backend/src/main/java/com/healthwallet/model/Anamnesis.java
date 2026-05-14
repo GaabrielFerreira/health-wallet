@@ -33,4 +33,22 @@ public class Anamnesis extends BaseEntity {
 
     @Column(columnDefinition = "TEXT")
     private String observations;
+
+    @Column(name = "weight")
+    private Double weight;
+
+    @Column(name = "height")
+    private Double height;
+
+    @Column(name = "previous_surgeries", columnDefinition = "TEXT")
+    private String previousSurgeries;
+
+    @Column(name = "smoker")
+    private Boolean smoker;
+
+    @Column(name = "physical_activity", length = 50)
+    private String physicalActivity;
+
+    @Column(name = "alcohol_consumption", length = 50)
+    private String alcoholConsumption;
 }

@@ -17,6 +17,11 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
 
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 10MB
+
 jwt:
   secret: ${JWT_SECRET:aGVhbHRod2FsbGV0LXNlY3JldC1rZXktZm9yLWp3dC10b2tlbi1nZW5lcmF0aW9uLTI1Nmk=}
   expiration: ${JWT_EXPIRATION:86400000}

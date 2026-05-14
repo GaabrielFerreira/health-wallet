@@ -129,7 +129,8 @@ class AnamnesisControllerTest {
         AnamnesisUpdateRequest updateRequest = buildUpdateRequest("Amoxicilina", "Diabetes tipo 2");
         AnamnesisResponse updated = new AnamnesisResponse(
                 UUID.randomUUID(), patientId, "Amoxicilina", "Diabetes tipo 2",
-                "Metformina", "A+", "Mãe diabética", "Revisão anual"
+                "Metformina", "A+", "Mãe diabética", "Revisão anual",
+                70.0, 175.0, "Apendicectomia", false, "Caminhada", "Social"
         );
 
         when(anamnesisService.update(eq(patientId), any())).thenReturn(updated);
@@ -224,6 +225,7 @@ class AnamnesisControllerTest {
 
     private AnamnesisResponse buildResponse(UUID id, UUID patientId) {
         return new AnamnesisResponse(id, patientId, "Dipirona", "Hipertensão",
-                "Losartana 50mg", "O+", "Pai diabético", "Nenhuma");
+                "Losartana 50mg", "O+", "Pai diabético", "Nenhuma",
+                70.0, 175.0, "Apendicectomia", false, "Caminhada", "Social");
     }
 }

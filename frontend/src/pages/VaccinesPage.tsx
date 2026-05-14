@@ -15,7 +15,11 @@ type Vaccine = {
   dose: Dose;
   proof: string | null;
   observations: string | null;
+  hasProof: boolean;
 };
+
+const PROOF_MAX_SIZE = 5 * 1024 * 1024;
+const PROOF_ACCEPTED_TYPES = ["application/pdf", "image/jpeg", "image/png"];
 
 const DOSE_LABEL: Record<Dose, string> = {
   FIRST: "1ª dose",
@@ -44,6 +48,7 @@ export function VaccinesPage() {
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [proofFile, setProofFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -65,6 +70,7 @@ export function VaccinesPage() {
 
   function openModal() {
     setForm(EMPTY_FORM);
+    setProofFile(null);
     setFormError(null);
     setIsModalOpen(true);
   }
@@ -80,6 +86,38 @@ export function VaccinesPage() {
     setForm((prev) => ({ ...prev, [name]: value }));
   }
 
+  function handleProofChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null;
+    if (file) {
+      if (!PROOF_ACCEPTED_TYPES.includes(file.type)) {
+        setFormError("Comprovante deve ser um arquivo PDF, JPG ou PNG.");
+        e.target.value = "";
+        setProofFile(null);
+        return;
+      }
+      if (file.size > PROOF_MAX_SIZE) {
+        setFormError("Comprovante deve ter no máximo 5MB.");
+        e.target.value = "";
+        setProofFile(null);
+        return;
+      }
+    }
+    setFormError(null);
+    setProofFile(file);
+  }
+
+  async function viewProof(vaccineId: string) {
+    try {
+      const res = await api.get(`/vaccines/${vaccineId}/comprovante`, {
+        responseType: "blob",
+      });
+      const url = URL.createObjectURL(res.data);
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch {
+      setError("Erro ao abrir comprovante. Tente novamente.");
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!user?.id) return;
@@ -92,7 +130,7 @@ export function VaccinesPage() {
     setSubmitting(true);
     setFormError(null);
     try {
-      await api.post("/vaccines", {
+      const res = await api.post<Vaccine>("/vaccines", {
         patientId: user.id,
         name: form.name,
         manufacturer: form.manufacturer || null,
@@ -101,6 +139,13 @@ export function VaccinesPage() {
         dose: form.dose,
         observations: form.observations || null,
       });
+
+      if (proofFile) {
+        const formData = new FormData();
+        formData.append("file", proofFile);
+        await api.post(`/vaccines/${res.data.id}/comprovante`, formData);
+      }
+
       closeModal();
       loadVaccines();
     } catch {
@@ -167,15 +212,14 @@ export function VaccinesPage() {
                       <td className="px-5 py-4 text-gray-600">{v.manufacturer ?? "—"}</td>
                       <td className="px-5 py-4 text-gray-600">{v.lot ?? "—"}</td>
                       <td className="px-5 py-4">
-                        {v.proof ? (
-                          <a
-                            href={v.proof}
-                            target="_blank"
-                            rel="noreferrer"
+                        {v.hasProof ? (
+                          <button
+                            type="button"
+                            onClick={() => viewProof(v.id)}
                             className="text-purple-600 hover:text-purple-700 hover:underline"
                           >
                             Ver comprovante
-                          </a>
+                          </button>
                         ) : (
                           <span className="text-gray-400">—</span>
                         )}
@@ -286,6 +330,18 @@ export function VaccinesPage() {
                   placeholder="Sem reações, etc."
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 transition resize-none"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">Comprovante</label>
+                <input
+                  type="file"
+                  name="proof"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  onChange={handleProofChange}
+                  className="w-full text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-purple-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-purple-700 hover:file:bg-purple-100 transition"
+                />
+                <p className="mt-1 text-xs text-gray-400">PDF, JPG ou PNG, até 5MB.</p>
               </div>
 
               <div className="flex justify-end gap-3 pt-2">

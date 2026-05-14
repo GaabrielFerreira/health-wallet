@@ -20,4 +20,5 @@ public class VaccineResponse {
     private Dose dose;
     private String proof;
     private String observations;
+    private boolean hasProof;
 }

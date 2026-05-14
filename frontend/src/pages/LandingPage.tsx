@@ -104,6 +104,17 @@ export function LandingPage() {
               Já tenho conta
             </button>
           </div>
+          <p className="mt-8 text-sm text-gray-400">
+            Ajude-nos a melhorar -{" "}
+            <a
+              href="https://docs.google.com/forms/d/e/1FAIpQLSe4c5igMFWXZVjVCzfquk_HJuOoi-hAqkh-TKdIq1iYB2gtMg/viewform"
+              target="_blank"
+              rel="noreferrer"
+              className="text-purple-500 hover:text-purple-700 underline underline-offset-2 transition"
+            >
+              responda nossa pesquisa de validação
+            </a>
+          </p>
         </div>
       </section>
 
@@ -217,7 +228,7 @@ export function LandingPage() {
             </svg>
             <span className="text-sm font-semibold text-gray-700">Health Wallet</span>
           </div>
-          <p className="text-xs text-gray-400">© 2026 Health Wallet. Projeto acadêmico — FACENS Engenharia de Computação.</p>
+          <p className="text-xs text-gray-400">© 2026 Health Wallet. UniFacens - Eng. Computação 7° Sem. 2026S1 · Disciplina Eng. Software</p>
         </div>
       </footer>
 

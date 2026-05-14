@@ -4,6 +4,7 @@ import { RegisterPage } from "../pages/RegisterPage";
 import { AnamnesisPage } from "../pages/AnamnesisPage";
 import { LandingPage } from "../pages/LandingPage";
 import { VaccinesPage } from "../pages/VaccinesPage";
+import { DashboardPage } from "../pages/DashboardPage";
 import { useAuth } from "../context/AuthContext";
 import type { ReactNode } from "react";
 
@@ -19,6 +20,14 @@ export function AppRoutes() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/cadastro" element={<RegisterPage />} />
+        <Route
+          path="/dashboard"
+          element={
+            <PrivateRoute>
+              <DashboardPage />
+            </PrivateRoute>
+          }
+        />
         <Route
           path="/anamnese"
           element={

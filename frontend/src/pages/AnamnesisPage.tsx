@@ -1,7 +1,7 @@
-import { useState } from "react";
-import { NavLink } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { api } from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import { Sidebar } from "../components/Sidebar";
 
 const BLOOD_TYPES = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 const ACTIVITY_LEVELS = ["Sedentário", "Leve", "Moderado", "Intenso"];
@@ -35,26 +35,60 @@ function validate(form: FormFields): FormErrors {
 
 type FeedbackState = "idle" | "loading" | "success" | "error";
 
+const INITIAL_FORM: FormFields = {
+  bloodType: "",
+  weight: "",
+  height: "",
+  allergies: "",
+  chronicDiseases: "",
+  previousSurgeries: "",
+  medications: "",
+  familyHistory: "",
+  observations: "",
+  smoker: false,
+  physicalActivity: "Moderado",
+  alcoholConsumption: "Ocasional",
+};
+
 export function AnamnesisPage() {
-  const { user, logout } = useAuth();
-  const [form, setForm] = useState<FormFields>({
-    bloodType: "",
-    weight: "",
-    height: "",
-    allergies: "",
-    chronicDiseases: "",
-    previousSurgeries: "",
-    medications: "",
-    familyHistory: "",
-    observations: "",
-    smoker: false,
-    physicalActivity: "Moderado",
-    alcoholConsumption: "Ocasional",
-  });
+  const { user } = useAuth();
+  const [form, setForm] = useState<FormFields>(INITIAL_FORM);
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitted, setSubmitted] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackState>("idle");
+  const [exists, setExists] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState<string | null>(null);
+
+  // Carregar anamnese existente
+  useEffect(() => {
+    if (!user?.id) return;
+    async function load() {
+      try {
+        const { data } = await api.get(`/anamnesis/${user!.id}`);
+        setExists(true);
+        setForm({
+          ...INITIAL_FORM,
+          bloodType: data.bloodType ?? "",
+          allergies: data.allergies ?? "",
+          chronicDiseases: data.chronicDiseases ?? "",
+          medications: data.medications ?? "",
+          familyHistory: data.familyHistory ?? "",
+          observations: data.observations ?? "",
+          weight: data.weight != null ? String(data.weight) : "",
+          height: data.height != null ? String(data.height) : "",
+          previousSurgeries: data.previousSurgeries ?? "",
+          smoker: data.smoker ?? false,
+          physicalActivity: data.physicalActivity ?? "Moderado",
+          alcoholConsumption: data.alcoholConsumption ?? "Ocasional",
+        });
+        if (data.updatedAt) setLastUpdate(data.updatedAt);
+      } catch {
+        setExists(false);
+      }
+    }
+    load();
+  }, [user?.id]);
 
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -69,20 +103,7 @@ export function AnamnesisPage() {
   }
 
   function handleCancel() {
-    setForm({
-      bloodType: "",
-      weight: "",
-      height: "",
-      allergies: "",
-      chronicDiseases: "",
-      previousSurgeries: "",
-      medications: "",
-      familyHistory: "",
-      observations: "",
-      smoker: false,
-      physicalActivity: "Moderado",
-      alcoholConsumption: "Ocasional",
-    });
+    setForm(INITIAL_FORM);
     setErrors({});
     setSubmitted(false);
     setFeedback("idle");
@@ -90,6 +111,8 @@ export function AnamnesisPage() {
 
   async function handleSubmit(e: React.SyntheticEvent) {
     e.preventDefault();
+    if (!user?.id) return;
+
     setSubmitted(true);
     const validationErrors = validate(form);
     if (Object.keys(validationErrors).length > 0) {
@@ -98,16 +121,30 @@ export function AnamnesisPage() {
     }
 
     setFeedback("loading");
+    const payload = {
+      bloodType: form.bloodType,
+      allergies: form.allergies,
+      chronicDiseases: form.chronicDiseases,
+      medications: form.medications,
+      familyHistory: form.familyHistory,
+      observations: form.observations,
+      weight: form.weight ? Number(form.weight) : null,
+      height: form.height ? Number(form.height) : null,
+      previousSurgeries: form.previousSurgeries,
+      smoker: form.smoker,
+      physicalActivity: form.physicalActivity,
+      alcoholConsumption: form.alcoholConsumption,
+    };
+
     try {
-      await api.post("/anamnesis", {
-        patientId: null,
-        bloodType: form.bloodType,
-        allergies: form.allergies,
-        chronicDiseases: form.chronicDiseases,
-        medications: form.medications,
-        familyHistory: form.familyHistory,
-        observations: form.observations,
-      });
+      if (exists) {
+        const { data } = await api.put(`/anamnesis/${user.id}`, payload);
+        if (data?.updatedAt) setLastUpdate(data.updatedAt);
+      } else {
+        const { data } = await api.post("/anamnesis", { patientId: user.id, ...payload });
+        setExists(true);
+        if (data?.updatedAt) setLastUpdate(data.updatedAt);
+      }
       setFeedback("success");
     } catch {
       setFeedback("error");
@@ -130,67 +167,7 @@ export function AnamnesisPage() {
 
   return (
     <div className="flex min-h-screen bg-gray-100">
-      {/* Sidebar */}
-      <aside className="w-52 bg-gray-900 flex flex-col flex-shrink-0">
-        {/* Logo */}
-        <div className="flex items-center gap-2 px-5 py-5">
-          <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 20.364l-7.682-7.682a4.5 4.5 0 010-6.364z" />
-          </svg>
-          <span className="text-white font-semibold text-sm">Health Wallet</span>
-        </div>
-
-        {/* Nav */}
-        <nav className="flex-1 px-3 py-2 space-y-1">
-          <NavLink
-            to="/anamnese"
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${
-                isActive ? "bg-purple-600 text-white" : "text-gray-300 hover:bg-gray-800"
-              }`
-            }
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
-            Anamnese
-          </NavLink>
-          <NavLink
-            to="/vacinas"
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${
-                isActive ? "bg-purple-600 text-white" : "text-gray-300 hover:bg-gray-800"
-              }`
-            }
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-            </svg>
-            Vacinas
-          </NavLink>
-        </nav>
-
-        {/* User */}
-        <div className="px-4 py-4 border-t border-gray-700 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-            {user?.name?.slice(0, 2).toUpperCase() ?? "??"}
-          </div>
-          <div className="overflow-hidden flex-1">
-            <p className="text-white text-xs font-medium truncate">{user?.name}</p>
-            <p className="text-gray-400 text-xs truncate">{user?.email}</p>
-          </div>
-          <button
-            type="button"
-            onClick={logout}
-            title="Sair"
-            className="text-gray-400 hover:text-white transition flex-shrink-0"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1" />
-            </svg>
-          </button>
-        </div>
-      </aside>
+      <Sidebar />
 
       {/* Main */}
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -198,14 +175,16 @@ export function AnamnesisPage() {
         <div className="bg-white border-b border-gray-200 px-8 py-5">
           <h1 className="text-xl font-semibold text-gray-800">Anamnese</h1>
           <p className="text-xs text-gray-400 mt-0.5">
-            Última atualização: {new Date().toLocaleDateString("pt-BR")}
+            {exists && lastUpdate
+              ? `Última atualização: ${new Date(lastUpdate).toLocaleDateString("pt-BR")}`
+              : "Preencha os dados abaixo para registrar sua anamnese"}
           </p>
         </div>
 
         {/* Feedback */}
         {feedback === "success" && (
           <div className="mx-8 mt-5 bg-green-50 border border-green-300 text-green-700 rounded-lg px-4 py-3 text-sm">
-            Anamnese salva com sucesso!
+            {exists ? "Anamnese atualizada com sucesso!" : "Anamnese salva com sucesso!"}
           </div>
         )}
         {feedback === "error" && (
@@ -429,7 +408,11 @@ export function AnamnesisPage() {
             disabled={feedback === "loading"}
             className="px-6 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white text-sm font-semibold rounded-lg transition"
           >
-            {feedback === "loading" ? "Salvando..." : "Salvar anamnese"}
+            {feedback === "loading"
+              ? "Salvando..."
+              : exists
+                ? "Salvar alterações"
+                : "Criar anamnese"}
           </button>
         </div>
       </div>

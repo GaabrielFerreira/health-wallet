@@ -40,19 +40,14 @@ public class AnamnesisService {
         anamnesis.setBloodType(request.getBloodType());
         anamnesis.setFamilyHistory(request.getFamilyHistory());
         anamnesis.setObservations(request.getObservations());
+        anamnesis.setWeight(request.getWeight());
+        anamnesis.setHeight(request.getHeight());
+        anamnesis.setPreviousSurgeries(request.getPreviousSurgeries());
+        anamnesis.setSmoker(request.getSmoker());
+        anamnesis.setPhysicalActivity(request.getPhysicalActivity());
+        anamnesis.setAlcoholConsumption(request.getAlcoholConsumption());
 
-        Anamnesis saved = anamnesisRepository.save(anamnesis);
-
-        return new AnamnesisResponse(
-                saved.getId(),
-                saved.getPatient().getId(),
-                saved.getAllergies(),
-                saved.getChronicDiseases(),
-                saved.getMedications(),
-                saved.getBloodType(),
-                saved.getFamilyHistory(),
-                saved.getObservations()
-        );
+        return toResponse(anamnesisRepository.save(anamnesis));
     }
 
     public AnamnesisResponse getByPatientId(UUID patientId) {
@@ -62,16 +57,7 @@ public class AnamnesisService {
         Anamnesis anamnesis = anamnesisRepository.findByPatientId(patientId)
                 .orElseThrow(() -> new AnamnesisNotFoundException(patientId));
 
-        return new AnamnesisResponse(
-                anamnesis.getId(),
-                anamnesis.getPatient().getId(),
-                anamnesis.getAllergies(),
-                anamnesis.getChronicDiseases(),
-                anamnesis.getMedications(),
-                anamnesis.getBloodType(),
-                anamnesis.getFamilyHistory(),
-                anamnesis.getObservations()
-        );
+        return toResponse(anamnesis);
     }
 
     public List<AnamnesisResponse> listByPatientId(UUID patientId) {
@@ -79,16 +65,7 @@ public class AnamnesisService {
                 .orElseThrow(() -> new PatientNotFoundException(patientId));
 
         return anamnesisRepository.findAllByPatientId(patientId).stream()
-                .map(a -> new AnamnesisResponse(
-                        a.getId(),
-                        a.getPatient().getId(),
-                        a.getAllergies(),
-                        a.getChronicDiseases(),
-                        a.getMedications(),
-                        a.getBloodType(),
-                        a.getFamilyHistory(),
-                        a.getObservations()
-                ))
+                .map(this::toResponse)
                 .collect(Collectors.toList());
     }
 
@@ -105,18 +82,32 @@ public class AnamnesisService {
         anamnesis.setBloodType(request.getBloodType());
         anamnesis.setFamilyHistory(request.getFamilyHistory());
         anamnesis.setObservations(request.getObservations());
+        anamnesis.setWeight(request.getWeight());
+        anamnesis.setHeight(request.getHeight());
+        anamnesis.setPreviousSurgeries(request.getPreviousSurgeries());
+        anamnesis.setSmoker(request.getSmoker());
+        anamnesis.setPhysicalActivity(request.getPhysicalActivity());
+        anamnesis.setAlcoholConsumption(request.getAlcoholConsumption());
 
-        Anamnesis saved = anamnesisRepository.save(anamnesis);
+        return toResponse(anamnesisRepository.save(anamnesis));
+    }
 
+    private AnamnesisResponse toResponse(Anamnesis a) {
         return new AnamnesisResponse(
-                saved.getId(),
-                saved.getPatient().getId(),
-                saved.getAllergies(),
-                saved.getChronicDiseases(),
-                saved.getMedications(),
-                saved.getBloodType(),
-                saved.getFamilyHistory(),
-                saved.getObservations()
+                a.getId(),
+                a.getPatient().getId(),
+                a.getAllergies(),
+                a.getChronicDiseases(),
+                a.getMedications(),
+                a.getBloodType(),
+                a.getFamilyHistory(),
+                a.getObservations(),
+                a.getWeight(),
+                a.getHeight(),
+                a.getPreviousSurgeries(),
+                a.getSmoker(),
+                a.getPhysicalActivity(),
+                a.getAlcoholConsumption()
         );
     }
 }

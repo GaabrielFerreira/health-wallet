@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { api } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { Sidebar } from "../components/Sidebar";
@@ -45,21 +46,18 @@ export function VaccinesPage() {
   const { user } = useAuth();
   const [vaccines, setVaccines] = useState<Vaccine[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
 
   function loadVaccines() {
     if (!user?.id) return;
     setLoading(true);
-    setError(null);
     api
       .get<Vaccine[]>(`/vaccines/pacientes/${user.id}/historico`)
       .then((res) => setVaccines(res.data))
-      .catch(() => setError("Erro ao carregar histórico de vacinação. Tente novamente."))
+      .catch(() => toast.error("Erro ao carregar histórico de vacinação. Tente novamente."))
       .finally(() => setLoading(false));
   }
 
@@ -71,7 +69,6 @@ export function VaccinesPage() {
   function openModal() {
     setForm(EMPTY_FORM);
     setProofFile(null);
-    setFormError(null);
     setIsModalOpen(true);
   }
 
@@ -90,19 +87,18 @@ export function VaccinesPage() {
     const file = e.target.files?.[0] ?? null;
     if (file) {
       if (!PROOF_ACCEPTED_TYPES.includes(file.type)) {
-        setFormError("Comprovante deve ser um arquivo PDF, JPG ou PNG.");
+        toast.error("Comprovante deve ser um arquivo PDF, JPG ou PNG.");
         e.target.value = "";
         setProofFile(null);
         return;
       }
       if (file.size > PROOF_MAX_SIZE) {
-        setFormError("Comprovante deve ter no máximo 5MB.");
+        toast.error("Comprovante deve ter no máximo 5MB.");
         e.target.value = "";
         setProofFile(null);
         return;
       }
     }
-    setFormError(null);
     setProofFile(file);
   }
 
@@ -114,7 +110,7 @@ export function VaccinesPage() {
       const url = URL.createObjectURL(res.data);
       window.open(url, "_blank", "noopener,noreferrer");
     } catch {
-      setError("Erro ao abrir comprovante. Tente novamente.");
+      toast.error("Erro ao abrir comprovante. Tente novamente.");
     }
   }
 
@@ -123,12 +119,11 @@ export function VaccinesPage() {
     if (!user?.id) return;
 
     if (!form.name.trim() || !form.applicationDate || !form.dose) {
-      setFormError("Preencha nome, data de aplicação e dose.");
+      toast.error("Preencha nome, data de aplicação e dose.");
       return;
     }
 
     setSubmitting(true);
-    setFormError(null);
     try {
       const res = await api.post<Vaccine>("/vaccines", {
         patientId: user.id,
@@ -146,10 +141,11 @@ export function VaccinesPage() {
         await api.post(`/vaccines/${res.data.id}/comprovante`, formData);
       }
 
+      toast.success("Vacina cadastrada com sucesso!");
       closeModal();
       loadVaccines();
     } catch {
-      setFormError("Erro ao salvar vacina. Tente novamente.");
+      toast.error("Erro ao salvar vacina. Tente novamente.");
     } finally {
       setSubmitting(false);
     }
@@ -176,21 +172,15 @@ export function VaccinesPage() {
         </div>
 
         <div className="flex-1 overflow-y-auto px-8 py-6">
-          {error && (
-            <div className="mb-5 bg-red-50 border border-red-300 text-red-700 rounded-lg px-4 py-3 text-sm">
-              {error}
-            </div>
-          )}
-
           {loading ? (
             <div className="bg-white rounded-xl border border-gray-200 p-12 text-center text-sm text-gray-500">
               Carregando histórico...
             </div>
-          ) : vaccines.length === 0 && !error ? (
+          ) : vaccines.length === 0 ? (
             <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
               <p className="text-sm text-gray-500">Nenhuma vacina cadastrada ainda.</p>
             </div>
-          ) : vaccines.length > 0 ? (
+          ) : (
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
@@ -229,7 +219,7 @@ export function VaccinesPage() {
                 </tbody>
               </table>
             </div>
-          ) : null}
+          )}
         </div>
       </div>
 
@@ -251,12 +241,6 @@ export function VaccinesPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
-              {formError && (
-                <div className="bg-red-50 border border-red-300 text-red-700 rounded-lg px-3 py-2 text-sm">
-                  {formError}
-                </div>
-              )}
-
               <div>
                 <label className="block text-sm text-gray-600 mb-1">Vacina *</label>
                 <input

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import { useAuth } from "../context/AuthContext";
 
 export function LoginPage() {
@@ -7,12 +8,10 @@ export function LoginPage() {
   const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({ email: "", password: "" });
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setForm({ ...form, [e.target.name]: e.target.value });
-    setError("");
   }
 
   async function handleSubmit(e: React.SyntheticEvent) {
@@ -20,9 +19,10 @@ export function LoginPage() {
     setLoading(true);
     try {
       await login(form.email, form.password);
+      toast.success("Login realizado com sucesso!");
       navigate("/dashboard");
     } catch {
-      setError("Email ou senha inválidos.");
+      toast.error("Email ou senha inválidos.");
     } finally {
       setLoading(false);
     }
@@ -98,10 +98,6 @@ export function LoginPage() {
               </button>
             </div>
           </div>
-
-          {error && (
-            <p className="text-red-500 text-sm text-center -mt-1">{error}</p>
-          )}
 
           <button
             type="submit"

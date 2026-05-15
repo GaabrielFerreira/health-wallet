@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { api } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { Sidebar } from "../components/Sidebar";
@@ -33,8 +34,6 @@ function validate(form: FormFields): FormErrors {
   return errors;
 }
 
-type FeedbackState = "idle" | "loading" | "success" | "error";
-
 const INITIAL_FORM: FormFields = {
   bloodType: "",
   weight: "",
@@ -56,7 +55,7 @@ export function AnamnesisPage() {
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitted, setSubmitted] = useState(false);
-  const [feedback, setFeedback] = useState<FeedbackState>("idle");
+  const [saving, setSaving] = useState(false);
   const [exists, setExists] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
 
@@ -106,7 +105,6 @@ export function AnamnesisPage() {
     setForm(INITIAL_FORM);
     setErrors({});
     setSubmitted(false);
-    setFeedback("idle");
   }
 
   async function handleSubmit(e: React.SyntheticEvent) {
@@ -120,7 +118,7 @@ export function AnamnesisPage() {
       return;
     }
 
-    setFeedback("loading");
+    setSaving(true);
     const payload = {
       bloodType: form.bloodType,
       allergies: form.allergies,
@@ -137,6 +135,7 @@ export function AnamnesisPage() {
     };
 
     try {
+      const wasUpdate = exists;
       if (exists) {
         const { data } = await api.put(`/anamnesis/${user.id}`, payload);
         if (data?.updatedAt) setLastUpdate(data.updatedAt);
@@ -145,9 +144,11 @@ export function AnamnesisPage() {
         setExists(true);
         if (data?.updatedAt) setLastUpdate(data.updatedAt);
       }
-      setFeedback("success");
+      toast.success(wasUpdate ? "Anamnese atualizada com sucesso!" : "Anamnese salva com sucesso!");
     } catch {
-      setFeedback("error");
+      toast.error("Erro ao salvar anamnese. Tente novamente.");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -180,18 +181,6 @@ export function AnamnesisPage() {
               : "Preencha os dados abaixo para registrar sua anamnese"}
           </p>
         </div>
-
-        {/* Feedback */}
-        {feedback === "success" && (
-          <div className="mx-8 mt-5 bg-green-50 border border-green-300 text-green-700 rounded-lg px-4 py-3 text-sm">
-            {exists ? "Anamnese atualizada com sucesso!" : "Anamnese salva com sucesso!"}
-          </div>
-        )}
-        {feedback === "error" && (
-          <div className="mx-8 mt-5 bg-red-50 border border-red-300 text-red-700 rounded-lg px-4 py-3 text-sm">
-            Erro ao salvar. Tente novamente.
-          </div>
-        )}
 
         {/* Content */}
         <form onSubmit={handleSubmit} noValidate className="flex-1 overflow-y-auto px-8 py-6 space-y-5">
@@ -405,10 +394,10 @@ export function AnamnesisPage() {
             type="submit"
             form=""
             onClick={handleSubmit}
-            disabled={feedback === "loading"}
+            disabled={saving}
             className="px-6 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white text-sm font-semibold rounded-lg transition"
           >
-            {feedback === "loading"
+            {saving
               ? "Salvando..."
               : exists
                 ? "Salvar alterações"

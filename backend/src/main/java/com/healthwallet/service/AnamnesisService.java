@@ -3,6 +3,7 @@ package com.healthwallet.service;
 import com.healthwallet.dto.AnamnesisRequest;
 import com.healthwallet.dto.AnamnesisResponse;
 import com.healthwallet.dto.AnamnesisUpdateRequest;
+import com.healthwallet.event.AnamnesisUpdatedEvent;
 import com.healthwallet.exception.AnamnesisAlreadyExistsException;
 import com.healthwallet.exception.AnamnesisNotFoundException;
 import com.healthwallet.exception.PatientNotFoundException;
@@ -11,6 +12,7 @@ import com.healthwallet.model.User;
 import com.healthwallet.repository.AnamnesisRepository;
 import com.healthwallet.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -23,6 +25,7 @@ public class AnamnesisService {
 
     private final AnamnesisRepository anamnesisRepository;
     private final UserRepository userRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     public AnamnesisResponse create(AnamnesisRequest request) {
         User patient = userRepository.findById(request.getPatientId())
@@ -70,11 +73,14 @@ public class AnamnesisService {
     }
 
     public AnamnesisResponse update(UUID patientId, AnamnesisUpdateRequest request) {
-        userRepository.findById(patientId)
+        User patient = userRepository.findById(patientId)
                 .orElseThrow(() -> new PatientNotFoundException(patientId));
 
         Anamnesis anamnesis = anamnesisRepository.findByPatientId(patientId)
                 .orElseThrow(() -> new AnamnesisNotFoundException(patientId));
+
+        Anamnesis snapshot = snapshot(anamnesis);
+        eventPublisher.publishEvent(new AnamnesisUpdatedEvent(snapshot, patient));
 
         anamnesis.setAllergies(request.getAllergies());
         anamnesis.setChronicDiseases(request.getChronicDiseases());
@@ -90,6 +96,25 @@ public class AnamnesisService {
         anamnesis.setAlcoholConsumption(request.getAlcoholConsumption());
 
         return toResponse(anamnesisRepository.save(anamnesis));
+    }
+
+    private Anamnesis snapshot(Anamnesis source) {
+        Anamnesis copy = new Anamnesis();
+        copy.setId(source.getId());
+        copy.setPatient(source.getPatient());
+        copy.setAllergies(source.getAllergies());
+        copy.setChronicDiseases(source.getChronicDiseases());
+        copy.setMedications(source.getMedications());
+        copy.setBloodType(source.getBloodType());
+        copy.setFamilyHistory(source.getFamilyHistory());
+        copy.setObservations(source.getObservations());
+        copy.setWeight(source.getWeight());
+        copy.setHeight(source.getHeight());
+        copy.setPreviousSurgeries(source.getPreviousSurgeries());
+        copy.setSmoker(source.getSmoker());
+        copy.setPhysicalActivity(source.getPhysicalActivity());
+        copy.setAlcoholConsumption(source.getAlcoholConsumption());
+        return copy;
     }
 
     private AnamnesisResponse toResponse(Anamnesis a) {

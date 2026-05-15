@@ -7,10 +7,13 @@ import com.healthwallet.dto.AnamnesisUpdateRequest;
 import com.healthwallet.exception.AnamnesisAlreadyExistsException;
 import com.healthwallet.exception.AnamnesisNotFoundException;
 import com.healthwallet.exception.PatientNotFoundException;
+import com.healthwallet.security.JwtService;
 import com.healthwallet.security.SecurityConfig;
+import com.healthwallet.security.UserDetailsServiceImpl;
 import com.healthwallet.service.AnamnesisService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
@@ -28,6 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(AnamnesisController.class)
 @Import(SecurityConfig.class)
+@AutoConfigureMockMvc(addFilters = false)
 class AnamnesisControllerTest {
 
     @Autowired
@@ -38,6 +42,12 @@ class AnamnesisControllerTest {
 
     @MockBean
     private AnamnesisService anamnesisService;
+
+    @MockBean
+    private JwtService jwtService;
+
+    @MockBean
+    private UserDetailsServiceImpl userDetailsService;
 
     // ── CREATE ────────────────────────────────────────────────────────────────
 

@@ -3,11 +3,7 @@ package com.healthwallet.service;
 import com.healthwallet.dto.VaccineAttachmentResponse;
 import com.healthwallet.dto.VaccineRequest;
 import com.healthwallet.dto.VaccineResponse;
-import com.healthwallet.exception.InvalidAttachmentException;
 import com.healthwallet.exception.PatientNotFoundException;
-import com.healthwallet.exception.VaccineAttachmentNotFoundException;
-import com.healthwallet.exception.VaccineNotFoundException;
-import com.healthwallet.model.AttachmentType;
 import com.healthwallet.model.Vaccine;
 import com.healthwallet.model.VaccineAttachment;
 import com.healthwallet.repository.UserRepository;
@@ -15,12 +11,9 @@ import com.healthwallet.repository.VaccineAttachmentRepository;
 import com.healthwallet.repository.VaccineRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -29,17 +22,10 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class VaccineService {
 
-    private static final long MAX_FILE_SIZE = 5 * 1024 * 1024;
-
-    private static final Map<String, AttachmentType> ALLOWED_TYPES = Map.of(
-            "application/pdf", AttachmentType.PDF,
-            "image/jpeg", AttachmentType.JPG,
-            "image/png", AttachmentType.PNG
-    );
-
     private final VaccineRepository vaccineRepository;
     private final VaccineAttachmentRepository vaccineAttachmentRepository;
     private final UserRepository userRepository;
+    private final VaccineAttachmentService attachmentService;
 
     public List<VaccineResponse> listByPatientId(UUID patientId) {
         userRepository.findById(patientId)
@@ -74,58 +60,14 @@ public class VaccineService {
         return toResponse(saved, false);
     }
 
-    @Transactional
+    /** Delega ao VaccineAttachmentService (SRP). Mantido para compatibilidade. */
     public VaccineAttachmentResponse uploadProof(UUID vaccineId, MultipartFile file) {
-        Vaccine vaccine = vaccineRepository.findById(vaccineId)
-                .orElseThrow(() -> new VaccineNotFoundException(vaccineId));
-
-        if (file == null || file.isEmpty()) {
-            throw new InvalidAttachmentException("Arquivo do comprovante é obrigatório");
-        }
-        if (file.getSize() > MAX_FILE_SIZE) {
-            throw new InvalidAttachmentException("Arquivo excede o tamanho máximo de 5MB");
-        }
-
-        AttachmentType type = ALLOWED_TYPES.get(file.getContentType());
-        if (type == null) {
-            throw new InvalidAttachmentException("Tipo de arquivo não suportado. Use PDF, JPG ou PNG");
-        }
-
-        byte[] data;
-        try {
-            data = file.getBytes();
-        } catch (IOException e) {
-            throw new InvalidAttachmentException("Não foi possível ler o arquivo enviado");
-        }
-
-        VaccineAttachment attachment = vaccineAttachmentRepository.findByVaccineId(vaccineId)
-                .orElseGet(VaccineAttachment::new);
-        attachment.setVaccine(vaccine);
-        attachment.setFileName(file.getOriginalFilename());
-        attachment.setContentType(file.getContentType());
-        attachment.setFileSize(file.getSize());
-        attachment.setType(type);
-        attachment.setData(data);
-
-        VaccineAttachment saved = vaccineAttachmentRepository.save(attachment);
-
-        return new VaccineAttachmentResponse(
-                saved.getId(),
-                vaccineId,
-                saved.getFileName(),
-                saved.getContentType(),
-                saved.getFileSize(),
-                saved.getType()
-        );
+        return attachmentService.upload(vaccineId, file);
     }
 
-    @Transactional(readOnly = true)
+    /** Delega ao VaccineAttachmentService (SRP). Mantido para compatibilidade. */
     public VaccineAttachment getProof(UUID vaccineId) {
-        vaccineRepository.findById(vaccineId)
-                .orElseThrow(() -> new VaccineNotFoundException(vaccineId));
-
-        return vaccineAttachmentRepository.findByVaccineId(vaccineId)
-                .orElseThrow(() -> new VaccineAttachmentNotFoundException(vaccineId));
+        return attachmentService.get(vaccineId);
     }
 
     private VaccineResponse toResponse(Vaccine v, boolean hasProof) {

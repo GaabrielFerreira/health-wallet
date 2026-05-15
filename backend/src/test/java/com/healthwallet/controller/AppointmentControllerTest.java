@@ -4,10 +4,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.healthwallet.dto.AppointmentRequest;
 import com.healthwallet.dto.AppointmentResponse;
 import com.healthwallet.exception.PatientNotFoundException;
+import com.healthwallet.security.JwtService;
 import com.healthwallet.security.SecurityConfig;
+import com.healthwallet.security.UserDetailsServiceImpl;
 import com.healthwallet.service.AppointmentService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
@@ -26,6 +29,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(AppointmentController.class)
 @Import(SecurityConfig.class)
+@AutoConfigureMockMvc(addFilters = false)
 class AppointmentControllerTest {
 
     @Autowired
@@ -36,6 +40,12 @@ class AppointmentControllerTest {
 
     @MockBean
     private AppointmentService appointmentService;
+
+    @MockBean
+    private JwtService jwtService;
+
+    @MockBean
+    private UserDetailsServiceImpl userDetailsService;
 
     // ── POST ──────────────────────────────────────────────────────────────────
 

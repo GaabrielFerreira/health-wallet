@@ -3,10 +3,7 @@ package com.healthwallet.service;
 import com.healthwallet.dto.VaccineAttachmentResponse;
 import com.healthwallet.dto.VaccineRequest;
 import com.healthwallet.dto.VaccineResponse;
-import com.healthwallet.exception.InvalidAttachmentException;
 import com.healthwallet.exception.PatientNotFoundException;
-import com.healthwallet.exception.VaccineAttachmentNotFoundException;
-import com.healthwallet.exception.VaccineNotFoundException;
 import com.healthwallet.model.AttachmentType;
 import com.healthwallet.model.Dose;
 import com.healthwallet.model.User;
@@ -17,7 +14,6 @@ import com.healthwallet.repository.VaccineAttachmentRepository;
 import com.healthwallet.repository.VaccineRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -46,6 +42,9 @@ class VaccineServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private VaccineAttachmentService attachmentService;
 
     @InjectMocks
     private VaccineService vaccineService;
@@ -111,135 +110,37 @@ class VaccineServiceTest {
                 .isInstanceOf(PatientNotFoundException.class);
     }
 
-    // ── UPLOAD PROOF ──────────────────────────────────────────────────────────
+    // ── DELEGAÇÃO ─────────────────────────────────────────────────────────────
+    // Após refatoração SRP, métodos de attachment apenas delegam ao
+    // VaccineAttachmentService. Os testes da lógica em si vivem em
+    // VaccineAttachmentServiceTest.
 
     @Test
-    void uploadProof_savesAttachment_whenFileIsValid() {
+    void uploadProof_delegatesToAttachmentService() {
         UUID vaccineId = UUID.randomUUID();
-        Vaccine vaccine = buildVaccine(buildUser(UUID.randomUUID()));
-        vaccine.setId(vaccineId);
-        MultipartFile file = new MockMultipartFile(
-                "file", "comprovante.pdf", "application/pdf", "conteudo-pdf".getBytes());
+        MultipartFile file = new MockMultipartFile("file", "c.pdf", "application/pdf", "x".getBytes());
+        VaccineAttachmentResponse expected = new VaccineAttachmentResponse(
+                UUID.randomUUID(), vaccineId, "c.pdf", "application/pdf", 1L, AttachmentType.PDF);
 
-        when(vaccineRepository.findById(vaccineId)).thenReturn(Optional.of(vaccine));
-        when(vaccineAttachmentRepository.findByVaccineId(vaccineId)).thenReturn(Optional.empty());
-        when(vaccineAttachmentRepository.save(any())).thenAnswer(inv -> {
-            VaccineAttachment a = inv.getArgument(0);
-            a.setId(UUID.randomUUID());
-            return a;
-        });
+        when(attachmentService.upload(vaccineId, file)).thenReturn(expected);
 
-        VaccineAttachmentResponse response = vaccineService.uploadProof(vaccineId, file);
+        VaccineAttachmentResponse result = vaccineService.uploadProof(vaccineId, file);
 
-        assertThat(response.getVaccineId()).isEqualTo(vaccineId);
-        assertThat(response.getFileName()).isEqualTo("comprovante.pdf");
-        assertThat(response.getType()).isEqualTo(AttachmentType.PDF);
-
-        ArgumentCaptor<VaccineAttachment> captor = ArgumentCaptor.forClass(VaccineAttachment.class);
-        verify(vaccineAttachmentRepository).save(captor.capture());
-        assertThat(captor.getValue().getVaccine().getId()).isEqualTo(vaccineId);
-        assertThat(captor.getValue().getData()).isEqualTo("conteudo-pdf".getBytes());
+        assertThat(result).isSameAs(expected);
+        verify(attachmentService).upload(vaccineId, file);
     }
 
     @Test
-    void uploadProof_replacesExistingAttachment() {
+    void getProof_delegatesToAttachmentService() {
         UUID vaccineId = UUID.randomUUID();
-        Vaccine vaccine = buildVaccine(buildUser(UUID.randomUUID()));
-        vaccine.setId(vaccineId);
-        VaccineAttachment existing = new VaccineAttachment();
-        existing.setId(UUID.randomUUID());
-        MultipartFile file = new MockMultipartFile(
-                "file", "novo.png", "image/png", "png-bytes".getBytes());
+        VaccineAttachment expected = new VaccineAttachment();
 
-        when(vaccineRepository.findById(vaccineId)).thenReturn(Optional.of(vaccine));
-        when(vaccineAttachmentRepository.findByVaccineId(vaccineId)).thenReturn(Optional.of(existing));
-        when(vaccineAttachmentRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-
-        VaccineAttachmentResponse response = vaccineService.uploadProof(vaccineId, file);
-
-        assertThat(response.getId()).isEqualTo(existing.getId());
-        assertThat(response.getType()).isEqualTo(AttachmentType.PNG);
-    }
-
-    @Test
-    void uploadProof_throwsVaccineNotFound_whenVaccineMissing() {
-        UUID vaccineId = UUID.randomUUID();
-        MultipartFile file = new MockMultipartFile(
-                "file", "c.pdf", "application/pdf", "x".getBytes());
-        when(vaccineRepository.findById(vaccineId)).thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> vaccineService.uploadProof(vaccineId, file))
-                .isInstanceOf(VaccineNotFoundException.class);
-
-        verify(vaccineAttachmentRepository, never()).save(any());
-    }
-
-    @Test
-    void uploadProof_throwsInvalidAttachment_whenFileIsEmpty() {
-        UUID vaccineId = UUID.randomUUID();
-        Vaccine vaccine = buildVaccine(buildUser(UUID.randomUUID()));
-        vaccine.setId(vaccineId);
-        MultipartFile file = new MockMultipartFile(
-                "file", "c.pdf", "application/pdf", new byte[0]);
-        when(vaccineRepository.findById(vaccineId)).thenReturn(Optional.of(vaccine));
-
-        assertThatThrownBy(() -> vaccineService.uploadProof(vaccineId, file))
-                .isInstanceOf(InvalidAttachmentException.class);
-    }
-
-    @Test
-    void uploadProof_throwsInvalidAttachment_whenContentTypeNotAllowed() {
-        UUID vaccineId = UUID.randomUUID();
-        Vaccine vaccine = buildVaccine(buildUser(UUID.randomUUID()));
-        vaccine.setId(vaccineId);
-        MultipartFile file = new MockMultipartFile(
-                "file", "c.txt", "text/plain", "texto".getBytes());
-        when(vaccineRepository.findById(vaccineId)).thenReturn(Optional.of(vaccine));
-
-        assertThatThrownBy(() -> vaccineService.uploadProof(vaccineId, file))
-                .isInstanceOf(InvalidAttachmentException.class)
-                .hasMessageContaining("Tipo de arquivo");
-
-        verify(vaccineAttachmentRepository, never()).save(any());
-    }
-
-    // ── GET PROOF ─────────────────────────────────────────────────────────────
-
-    @Test
-    void getProof_returnsAttachment_whenPresent() {
-        UUID vaccineId = UUID.randomUUID();
-        Vaccine vaccine = buildVaccine(buildUser(UUID.randomUUID()));
-        vaccine.setId(vaccineId);
-        VaccineAttachment attachment = new VaccineAttachment();
-        attachment.setData("bytes".getBytes());
-
-        when(vaccineRepository.findById(vaccineId)).thenReturn(Optional.of(vaccine));
-        when(vaccineAttachmentRepository.findByVaccineId(vaccineId)).thenReturn(Optional.of(attachment));
+        when(attachmentService.get(vaccineId)).thenReturn(expected);
 
         VaccineAttachment result = vaccineService.getProof(vaccineId);
 
-        assertThat(result.getData()).isEqualTo("bytes".getBytes());
-    }
-
-    @Test
-    void getProof_throwsVaccineNotFound_whenVaccineMissing() {
-        UUID vaccineId = UUID.randomUUID();
-        when(vaccineRepository.findById(vaccineId)).thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> vaccineService.getProof(vaccineId))
-                .isInstanceOf(VaccineNotFoundException.class);
-    }
-
-    @Test
-    void getProof_throwsAttachmentNotFound_whenNoAttachment() {
-        UUID vaccineId = UUID.randomUUID();
-        Vaccine vaccine = buildVaccine(buildUser(UUID.randomUUID()));
-        vaccine.setId(vaccineId);
-        when(vaccineRepository.findById(vaccineId)).thenReturn(Optional.of(vaccine));
-        when(vaccineAttachmentRepository.findByVaccineId(vaccineId)).thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> vaccineService.getProof(vaccineId))
-                .isInstanceOf(VaccineAttachmentNotFoundException.class);
+        assertThat(result).isSameAs(expected);
+        verify(attachmentService).get(vaccineId);
     }
 
     // ── HELPERS ───────────────────────────────────────────────────────────────

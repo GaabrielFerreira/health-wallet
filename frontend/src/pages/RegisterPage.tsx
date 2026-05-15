@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import { api } from "../services/api";
 
 function maskCPF(value: string): string {
@@ -59,7 +60,6 @@ export function RegisterPage() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [apiError, setApiError] = useState("");
 
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -70,7 +70,6 @@ export function RegisterPage() {
       [name]: name === "cpf" ? maskCPF(value) : value,
     };
     setForm(updated);
-    setApiError("");
     if (submitted) setErrors(validate(updated));
   }
 
@@ -92,12 +91,13 @@ export function RegisterPage() {
         password: form.password,
         role: form.role,
       });
+      toast.success("Conta criada com sucesso! Faça login para continuar.");
       navigate("/login");
     } catch (err: any) {
       if (err.response?.status === 409) {
-        setApiError("Este email já está cadastrado.");
+        toast.error("Este email já está cadastrado.");
       } else {
-        setApiError("Erro ao criar conta. Tente novamente.");
+        toast.error("Erro ao criar conta. Tente novamente.");
       }
     } finally {
       setLoading(false);
@@ -173,8 +173,6 @@ export function RegisterPage() {
             <input type="password" name="confirmPassword" value={form.confirmPassword} onChange={handleChange} className={inputClass("confirmPassword")} />
             {errors.confirmPassword && <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>}
           </div>
-
-          {apiError && <p className="text-red-500 text-sm text-center">{apiError}</p>}
 
           <button
             type="submit"

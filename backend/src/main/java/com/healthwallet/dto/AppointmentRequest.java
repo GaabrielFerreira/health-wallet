@@ -14,6 +14,9 @@ public class AppointmentRequest {
     @NotNull(message = "ID do paciente é obrigatório")
     private UUID patientId;
 
+    @NotNull(message = "ID do médico é obrigatório")
+    private UUID doctorId;
+
     @NotNull(message = "Data da consulta é obrigatória")
     @Future(message = "A data da consulta deve ser no futuro")
     private LocalDateTime date;

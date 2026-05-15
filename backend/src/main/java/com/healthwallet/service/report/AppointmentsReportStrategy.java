@@ -3,6 +3,7 @@ package com.healthwallet.service.report;
 import com.healthwallet.model.ReportType;
 import com.healthwallet.model.User;
 import com.healthwallet.repository.AppointmentRepository;
+import com.healthwallet.repository.AppointmentSpecification;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -23,7 +24,7 @@ public class AppointmentsReportStrategy implements ReportGenerationStrategy {
         sb.append("=== RELATÓRIO DE CONSULTAS ===\n");
         sb.append("Paciente: ").append(patient.getName()).append("\n\n");
 
-        var appointments = appointmentRepository.findAllByPatientId(patient.getId());
+        var appointments = appointmentRepository.findAll(AppointmentSpecification.byPatientId(patient.getId()));
         if (appointments.isEmpty()) {
             sb.append("Nenhuma consulta registrada.\n");
             return sb.toString();

@@ -12,6 +12,7 @@ public class AppointmentResponse {
 
     private UUID id;
     private UUID patientId;
+    private UUID doctorId;
     private LocalDateTime date;
     private String specialty;
     private String professional;

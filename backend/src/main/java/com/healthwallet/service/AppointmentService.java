@@ -8,6 +8,7 @@ import com.healthwallet.model.User;
 import com.healthwallet.repository.AppointmentRepository;
 import com.healthwallet.repository.AppointmentSpecification;
 import com.healthwallet.repository.UserRepository;
+import com.healthwallet.service.validation.DoctorValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -23,13 +24,17 @@ public class AppointmentService {
 
     private final AppointmentRepository appointmentRepository;
     private final UserRepository userRepository;
+    private final DoctorValidator doctorValidator;
 
     public AppointmentResponse create(AppointmentRequest request) {
         User patient = userRepository.findById(request.getPatientId())
                 .orElseThrow(() -> new PatientNotFoundException(request.getPatientId()));
 
+        User doctor = doctorValidator.validateAndGet(request.getDoctorId());
+
         Appointment appointment = new Appointment();
         appointment.setPatient(patient);
+        appointment.setDoctor(doctor);
         appointment.setDate(request.getDate());
         appointment.setSpecialty(request.getSpecialty());
         appointment.setProfessional(request.getProfessional());
@@ -38,8 +43,7 @@ public class AppointmentService {
         appointment.setPrescription(request.getPrescription());
         appointment.setMedicalObservation(request.getMedicalObservation());
 
-        Appointment saved = appointmentRepository.save(appointment);
-        return toResponse(saved);
+        return toResponse(appointmentRepository.save(appointment));
     }
 
     public List<AppointmentResponse> listByPatientId(UUID patientId, String specialty, String professional, LocalDate startDate, LocalDate endDate) {
@@ -70,6 +74,7 @@ public class AppointmentService {
         return new AppointmentResponse(
                 a.getId(),
                 a.getPatient().getId(),
+                a.getDoctor().getId(),
                 a.getDate(),
                 a.getSpecialty(),
                 a.getProfessional(),

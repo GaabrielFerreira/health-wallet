@@ -128,7 +128,7 @@ class AppointmentControllerTest {
     @Test
     void listByPatient_returns200_withAppointments() throws Exception {
         UUID patientId = UUID.randomUUID();
-        when(appointmentService.listByPatientId(patientId))
+        when(appointmentService.listByPatientId(eq(patientId), any(), any(), any(), any()))
                 .thenReturn(List.of(buildResponse(UUID.randomUUID(), patientId)));
 
         mockMvc.perform(get("/api/appointments/pacientes/{patientId}", patientId))
@@ -140,7 +140,7 @@ class AppointmentControllerTest {
     @Test
     void listByPatient_returns200_withEmptyList() throws Exception {
         UUID patientId = UUID.randomUUID();
-        when(appointmentService.listByPatientId(patientId)).thenReturn(List.of());
+        when(appointmentService.listByPatientId(eq(patientId), any(), any(), any(), any())).thenReturn(List.of());
 
         mockMvc.perform(get("/api/appointments/pacientes/{patientId}", patientId))
                 .andExpect(status().isOk())
@@ -150,7 +150,7 @@ class AppointmentControllerTest {
     @Test
     void listByPatient_returns404_whenPatientDoesNotExist() throws Exception {
         UUID patientId = UUID.randomUUID();
-        when(appointmentService.listByPatientId(eq(patientId)))
+        when(appointmentService.listByPatientId(eq(patientId), any(), any(), any(), any()))
                 .thenThrow(new PatientNotFoundException(patientId));
 
         mockMvc.perform(get("/api/appointments/pacientes/{patientId}", patientId))

@@ -6,10 +6,13 @@ import com.healthwallet.exception.PatientNotFoundException;
 import com.healthwallet.model.Appointment;
 import com.healthwallet.model.User;
 import com.healthwallet.repository.AppointmentRepository;
+import com.healthwallet.repository.AppointmentSpecification;
 import com.healthwallet.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -39,11 +42,26 @@ public class AppointmentService {
         return toResponse(saved);
     }
 
-    public List<AppointmentResponse> listByPatientId(UUID patientId) {
+    public List<AppointmentResponse> listByPatientId(UUID patientId, String specialty, String professional, LocalDate startDate, LocalDate endDate) {
         userRepository.findById(patientId)
                 .orElseThrow(() -> new PatientNotFoundException(patientId));
 
-        return appointmentRepository.findAllByPatientId(patientId).stream()
+        Specification<Appointment> spec = AppointmentSpecification.byPatientId(patientId);
+
+        if (specialty != null && !specialty.isBlank()) {
+            spec = spec.and(AppointmentSpecification.bySpecialty(specialty));
+        }
+        if (professional != null && !professional.isBlank()) {
+            spec = spec.and(AppointmentSpecification.byProfessional(professional));
+        }
+        if (startDate != null) {
+            spec = spec.and(AppointmentSpecification.fromDate(startDate));
+        }
+        if (endDate != null) {
+            spec = spec.and(AppointmentSpecification.toDate(endDate));
+        }
+
+        return appointmentRepository.findAll(spec).stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }

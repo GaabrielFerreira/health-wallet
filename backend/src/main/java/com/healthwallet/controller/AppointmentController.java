@@ -11,10 +11,12 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -40,14 +42,19 @@ public class AppointmentController {
         return ResponseEntity.status(HttpStatus.CREATED).body(appointmentService.create(request));
     }
 
-    @Operation(summary = "Listar consultas do paciente", description = "Retorna todas as consultas vinculadas a um paciente")
+    @Operation(summary = "Listar e filtrar consultas do paciente", description = "Retorna consultas vinculadas a um paciente com filtros opcionais por especialidade, profissional e período")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso"),
         @ApiResponse(responseCode = "404", description = "Paciente não encontrado",
             content = @Content(schema = @Schema(implementation = Object.class)))
     })
     @GetMapping("/pacientes/{patientId}")
-    public ResponseEntity<List<AppointmentResponse>> listByPatient(@PathVariable UUID patientId) {
-        return ResponseEntity.ok(appointmentService.listByPatientId(patientId));
+    public ResponseEntity<List<AppointmentResponse>> listByPatient(
+            @PathVariable UUID patientId,
+            @RequestParam(required = false) String specialty,
+            @RequestParam(required = false) String professional,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        return ResponseEntity.ok(appointmentService.listByPatientId(patientId, specialty, professional, startDate, endDate));
     }
 }

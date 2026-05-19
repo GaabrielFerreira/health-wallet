@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { api } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { Sidebar } from "../components/Sidebar";
+import { Tooltip } from "../components/Tooltip";
 
 const BLOOD_TYPES = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 const ACTIVITY_LEVELS = ["Sedentário", "Leve", "Moderado", "Intenso"];
@@ -59,35 +60,36 @@ export function AnamnesisPage() {
   const [exists, setExists] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
 
-  // Carregar anamnese existente
-  useEffect(() => {
+  const loadAnamnesis = useCallback(async () => {
     if (!user?.id) return;
-    async function load() {
-      try {
-        const { data } = await api.get(`/anamnesis/${user!.id}`);
-        setExists(true);
-        setForm({
-          ...INITIAL_FORM,
-          bloodType: data.bloodType ?? "",
-          allergies: data.allergies ?? "",
-          chronicDiseases: data.chronicDiseases ?? "",
-          medications: data.medications ?? "",
-          familyHistory: data.familyHistory ?? "",
-          observations: data.observations ?? "",
-          weight: data.weight != null ? String(data.weight) : "",
-          height: data.height != null ? String(data.height) : "",
-          previousSurgeries: data.previousSurgeries ?? "",
-          smoker: data.smoker ?? false,
-          physicalActivity: data.physicalActivity ?? "Moderado",
-          alcoholConsumption: data.alcoholConsumption ?? "Ocasional",
-        });
-        if (data.updatedAt) setLastUpdate(data.updatedAt);
-      } catch {
-        setExists(false);
-      }
+    try {
+      const { data } = await api.get(`/anamnesis/${user.id}`);
+      setExists(true);
+      setForm({
+        ...INITIAL_FORM,
+        bloodType: data.bloodType ?? "",
+        allergies: data.allergies ?? "",
+        chronicDiseases: data.chronicDiseases ?? "",
+        medications: data.medications ?? "",
+        familyHistory: data.familyHistory ?? "",
+        observations: data.observations ?? "",
+        weight: data.weight != null ? String(data.weight) : "",
+        height: data.height != null ? String(data.height) : "",
+        previousSurgeries: data.previousSurgeries ?? "",
+        smoker: data.smoker ?? false,
+        physicalActivity: data.physicalActivity ?? "Moderado",
+        alcoholConsumption: data.alcoholConsumption ?? "Ocasional",
+      });
+      if (data.updatedAt) setLastUpdate(data.updatedAt);
+    } catch {
+      setExists(false);
+      setForm(INITIAL_FORM);
     }
-    load();
   }, [user?.id]);
+
+  useEffect(() => {
+    loadAnamnesis();
+  }, [loadAnamnesis]);
 
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -102,9 +104,14 @@ export function AnamnesisPage() {
   }
 
   function handleCancel() {
-    setForm(INITIAL_FORM);
     setErrors({});
     setSubmitted(false);
+    if (exists) {
+      loadAnamnesis();
+      toast.success("Alterações descartadas.");
+    } else {
+      setForm(INITIAL_FORM);
+    }
   }
 
   async function handleSubmit(e: React.SyntheticEvent) {
@@ -174,7 +181,10 @@ export function AnamnesisPage() {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
         <div className="bg-white border-b border-gray-200 px-8 py-5">
-          <h1 className="text-xl font-semibold text-gray-800">Anamnese</h1>
+          <div className="flex items-center">
+            <h1 className="text-xl font-semibold text-gray-800">Anamnese</h1>
+            <Tooltip text="Anamnese é o conjunto de informações sobre sua saúde (alergias, doenças, medicamentos e hábitos) que ajudam médicos a entender seu histórico clínico." />
+          </div>
           <p className="text-xs text-gray-400 mt-0.5">
             {exists && lastUpdate
               ? `Última atualização: ${new Date(lastUpdate).toLocaleDateString("pt-BR")}`
@@ -220,7 +230,10 @@ export function AnamnesisPage() {
               </div>
 
               <div>
-                <label className="block text-sm text-gray-600 mb-1">Tipo Sanguíneo</label>
+                <label className="flex items-center text-sm text-gray-600 mb-1">
+                  Tipo Sanguíneo
+                  <Tooltip text="Informação crítica em emergências e transfusões. Caso não saiba, consulte um exame antigo ou seu cartão de doador de sangue." />
+                </label>
                 <select
                   name="bloodType"
                   value={form.bloodType}
@@ -336,7 +349,10 @@ export function AnamnesisPage() {
 
               {/* Atividade física */}
               <div className="flex items-center gap-3">
-                <label className="text-sm text-gray-600 whitespace-nowrap">Atividade física</label>
+                <label className="flex items-center text-sm text-gray-600 whitespace-nowrap">
+                  Atividade física
+                  <Tooltip text="Sedentário: nenhum exercício. Leve: caminhadas ocasionais. Moderado: 2-3x/semana. Intenso: prática regular acima de 4x/semana." />
+                </label>
                 <select
                   name="physicalActivity"
                   value={form.physicalActivity}

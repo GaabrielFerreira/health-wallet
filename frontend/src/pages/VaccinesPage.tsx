@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { api } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { Sidebar } from "../components/Sidebar";
+import { Tooltip } from "../components/Tooltip";
 
 type Dose = "FIRST" | "SECOND" | "BOOSTER";
 
@@ -50,6 +51,13 @@ export function VaccinesPage() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const filteredVaccines = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    if (!term) return vaccines;
+    return vaccines.filter((v) => v.name.toLowerCase().includes(term));
+  }, [vaccines, search]);
 
   function loadVaccines() {
     if (!user?.id) return;
@@ -65,6 +73,16 @@ export function VaccinesPage() {
     loadVaccines();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
+
+  // Fechar modal com ESC (heurística 3: controle e liberdade)
+  useEffect(() => {
+    if (!isModalOpen) return;
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") closeModal();
+    }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [isModalOpen]);
 
   function openModal() {
     setForm(EMPTY_FORM);
@@ -171,7 +189,23 @@ export function VaccinesPage() {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-8 py-6">
+        <div className="flex-1 overflow-y-auto px-8 py-6 space-y-4">
+          {/* Busca por nome (heurística 7: flexibilidade e eficiência) */}
+          {!loading && vaccines.length > 0 && (
+            <div className="relative">
+              <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar vacina pelo nome..."
+                className="w-full bg-white border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-sm outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 transition"
+              />
+            </div>
+          )}
+
           {loading ? (
             <div className="bg-white rounded-xl border border-gray-200 p-12 text-center text-sm text-gray-500">
               Carregando histórico...
@@ -179,6 +213,10 @@ export function VaccinesPage() {
           ) : vaccines.length === 0 ? (
             <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
               <p className="text-sm text-gray-500">Nenhuma vacina cadastrada ainda.</p>
+            </div>
+          ) : filteredVaccines.length === 0 ? (
+            <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+              <p className="text-sm text-gray-500">Nenhuma vacina encontrada para "{search}".</p>
             </div>
           ) : (
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -194,7 +232,7 @@ export function VaccinesPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {vaccines.map((v) => (
+                  {filteredVaccines.map((v) => (
                     <tr key={v.id} className="border-b border-gray-100 last:border-0">
                       <td className="px-5 py-4 text-gray-800">{v.name}</td>
                       <td className="px-5 py-4 text-gray-600">{formatDate(v.applicationDate)}</td>
@@ -265,7 +303,10 @@ export function VaccinesPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-600 mb-1">Dose *</label>
+                  <label className="flex items-center text-sm text-gray-600 mb-1">
+                    Dose *
+                    <Tooltip text="1ª dose: aplicação inicial do esquema. 2ª dose: complementa o esquema (geralmente após semanas). Reforço: dose adicional após esquema completo, para manter a imunidade." />
+                  </label>
                   <select
                     name="dose"
                     value={form.dose}

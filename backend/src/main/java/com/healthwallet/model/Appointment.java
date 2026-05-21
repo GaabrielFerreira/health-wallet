@@ -19,7 +19,7 @@ public class Appointment extends BaseEntity {
     private User patient;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "doctor_id", nullable = false)
+    @JoinColumn(name = "doctor_id", nullable = true)
     private User doctor;
 
     @Column(nullable = false)

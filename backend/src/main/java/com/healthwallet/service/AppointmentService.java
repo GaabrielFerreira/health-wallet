@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -27,10 +28,11 @@ public class AppointmentService {
     private final DoctorValidator doctorValidator;
 
     public AppointmentResponse create(AppointmentRequest request) {
-        User patient = userRepository.findById(request.getPatientId())
-                .orElseThrow(() -> new PatientNotFoundException(request.getPatientId()));
+        UUID patientId = Objects.requireNonNull(request.getPatientId());
+        User patient = userRepository.findById(patientId)
+                .orElseThrow(() -> new PatientNotFoundException(patientId));
 
-        User doctor = doctorValidator.validateAndGet(request.getDoctorId());
+        User doctor = request.getDoctorId() != null ? doctorValidator.validateAndGet(request.getDoctorId()) : null;
 
         Appointment appointment = new Appointment();
         appointment.setPatient(patient);
@@ -47,7 +49,7 @@ public class AppointmentService {
     }
 
     public List<AppointmentResponse> listByPatientId(UUID patientId, String specialty, String professional, LocalDate startDate, LocalDate endDate) {
-        userRepository.findById(patientId)
+        userRepository.findById(Objects.requireNonNull(patientId))
                 .orElseThrow(() -> new PatientNotFoundException(patientId));
 
         Specification<Appointment> spec = AppointmentSpecification.byPatientId(patientId);
@@ -74,7 +76,7 @@ public class AppointmentService {
         return new AppointmentResponse(
                 a.getId(),
                 a.getPatient().getId(),
-                a.getDoctor().getId(),
+                a.getDoctor() != null ? a.getDoctor().getId() : null,
                 a.getDate(),
                 a.getSpecialty(),
                 a.getProfessional(),

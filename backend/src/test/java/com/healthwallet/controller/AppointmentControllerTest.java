@@ -80,14 +80,19 @@ class AppointmentControllerTest {
     }
 
     @Test
-    void create_returns400_whenDoctorIdIsNull() throws Exception {
-        AppointmentRequest request = buildRequest(UUID.randomUUID(), null);
+    void create_returns201_whenDoctorIdIsNull() throws Exception {
+        // médico é opcional (doctorId não tem @NotNull): consulta sem médico deve ser criada normalmente
+        UUID patientId = UUID.randomUUID();
+        when(appointmentService.create(any()))
+                .thenReturn(buildResponse(UUID.randomUUID(), patientId, null));
 
         mockMvc.perform(post("/api/appointments")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.campos.doctorId").exists());
+                        .content(objectMapper.writeValueAsString(buildRequest(patientId, null))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.patientId").value(patientId.toString()))
+                .andExpect(jsonPath("$.doctorId").value(org.hamcrest.Matchers.nullValue()))
+                .andExpect(jsonPath("$.specialty").value("Cardiologia"));
     }
 
     @Test

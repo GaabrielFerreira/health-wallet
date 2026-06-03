@@ -84,6 +84,15 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
     }
 
+    @ExceptionHandler(ReportNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleReportNotFound(ReportNotFoundException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("status", 404);
+        body.put("erro", ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
+    }
+
     @ExceptionHandler(VaccineAttachmentNotFoundException.class)
     public ResponseEntity<Map<String, Object>> handleVaccineAttachmentNotFound(VaccineAttachmentNotFoundException ex) {
         Map<String, Object> body = new HashMap<>();

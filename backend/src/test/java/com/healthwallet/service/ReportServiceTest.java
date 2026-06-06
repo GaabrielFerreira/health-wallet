@@ -3,6 +3,7 @@ package com.healthwallet.service;
 import com.healthwallet.dto.ReportRequest;
 import com.healthwallet.dto.ReportResponse;
 import com.healthwallet.exception.PatientNotFoundException;
+import com.healthwallet.exception.ReportNotFoundException;
 import com.healthwallet.model.Report;
 import com.healthwallet.model.ReportStatus;
 import com.healthwallet.model.ReportType;
@@ -10,8 +11,11 @@ import com.healthwallet.model.User;
 import com.healthwallet.repository.ReportRepository;
 import com.healthwallet.repository.UserRepository;
 import com.healthwallet.service.report.ReportGenerationStrategy;
+import com.healthwallet.service.report.ReportPdfService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.util.List;
 import java.util.Optional;
@@ -41,7 +45,7 @@ class ReportServiceTest {
         when(vaccinesStrategy.supports()).thenReturn(ReportType.VACCINES);
 
         reportService = new ReportService(reportRepository, userRepository,
-                List.of(anamnesisStrategy, vaccinesStrategy));
+                List.of(anamnesisStrategy, vaccinesStrategy), new ReportPdfService());
         reportService.registerStrategies();
     }
 
@@ -123,5 +127,67 @@ class ReportServiceTest {
 
         assertThatThrownBy(() -> reportService.generate(request))
                 .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void listByPatientId_returnsMappedReports() {
+        UUID patientId = UUID.randomUUID();
+        User patient = new User();
+        patient.setId(patientId);
+        when(userRepository.findById(patientId)).thenReturn(Optional.of(patient));
+
+        Report report = new Report();
+        report.setId(UUID.randomUUID());
+        report.setPatient(patient);
+        report.setType(ReportType.VACCINES);
+        report.setStatus(ReportStatus.COMPLETED);
+        report.setObservations("conteúdo do relatório");
+        when(reportRepository.findAll(any(Specification.class), any(Sort.class)))
+                .thenReturn(List.of(report));
+
+        List<ReportResponse> result = reportService.listByPatientId(patientId, null, null, null, null);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getPatientId()).isEqualTo(patientId);
+        assertThat(result.get(0).getType()).isEqualTo(ReportType.VACCINES);
+        assertThat(result.get(0).getContent()).isEqualTo("conteúdo do relatório");
+    }
+
+    @Test
+    void listByPatientId_throwsPatientNotFound_whenPatientMissing() {
+        UUID patientId = UUID.randomUUID();
+        when(userRepository.findById(patientId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> reportService.listByPatientId(patientId, null, null, null, null))
+                .isInstanceOf(PatientNotFoundException.class);
+    }
+
+    @Test
+    void exportPdf_returnsPdfBytes() {
+        UUID reportId = UUID.randomUUID();
+        User patient = new User();
+        patient.setId(UUID.randomUUID());
+
+        Report report = new Report();
+        report.setId(reportId);
+        report.setPatient(patient);
+        report.setType(ReportType.FULL);
+        report.setObservations("=== RELATÓRIO COMPLETO ===");
+        when(reportRepository.findById(reportId)).thenReturn(Optional.of(report));
+
+        byte[] pdf = reportService.exportPdf(reportId);
+
+        assertThat(pdf).isNotEmpty();
+        assertThat(new String(pdf, 0, 4)).isEqualTo("%PDF"); // assinatura de arquivo PDF
+    }
+
+    @Test
+    void exportPdf_throwsReportNotFound_whenReportMissing() {
+        UUID reportId = UUID.randomUUID();
+        when(reportRepository.findById(reportId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> reportService.exportPdf(reportId))
+                .isInstanceOf(ReportNotFoundException.class);
     }
 }

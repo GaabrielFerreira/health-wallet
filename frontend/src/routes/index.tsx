@@ -5,6 +5,7 @@ import { AnamnesisPage } from "../pages/AnamnesisPage";
 import { LandingPage } from "../pages/LandingPage";
 import { VaccinesPage } from "../pages/VaccinesPage";
 import { ConsultasPage } from "../pages/ConsultasPage";
+import { ReportsPage } from "../pages/ReportsPage";
 import { DashboardPage } from "../pages/DashboardPage";
 import { useAuth } from "../context/AuthContext";
 import type { ReactNode } from "react";
@@ -50,6 +51,14 @@ export function AppRoutes() {
           element={
             <PrivateRoute>
               <ConsultasPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/relatorios"
+          element={
+            <PrivateRoute>
+              <ReportsPage />
             </PrivateRoute>
           }
         />

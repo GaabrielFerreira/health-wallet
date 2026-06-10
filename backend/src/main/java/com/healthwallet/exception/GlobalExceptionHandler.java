@@ -137,4 +137,31 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
+
+    @ExceptionHandler(SharedAccessNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleSharedAccessNotFound(SharedAccessNotFoundException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("status", 404);
+        body.put("erro", ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
+    }
+
+    @ExceptionHandler(DoctorAccessAlreadyGrantedException.class)
+    public ResponseEntity<Map<String, Object>> handleDoctorAccessAlreadyGranted(DoctorAccessAlreadyGrantedException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("status", 409);
+        body.put("erro", ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+    }
+
+    @ExceptionHandler(UnauthorizedDoctorAccessException.class)
+    public ResponseEntity<Map<String, Object>> handleUnauthorizedDoctorAccess(UnauthorizedDoctorAccessException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("status", 403);
+        body.put("erro", ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
+    }
 }

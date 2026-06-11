@@ -3,11 +3,14 @@ package com.healthwallet.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.healthwallet.dto.DoctorAccessResponse;
 import com.healthwallet.dto.GrantDoctorAccessRequest;
+import com.healthwallet.dto.RenewAccessRequest;
+import com.healthwallet.exception.CannotRenewRevokedAccessException;
 import com.healthwallet.exception.DoctorAccessAlreadyGrantedException;
 import com.healthwallet.exception.DoctorNotFoundException;
 import com.healthwallet.exception.InvalidDoctorRoleException;
 import com.healthwallet.exception.PatientNotFoundException;
 import com.healthwallet.exception.SharedAccessNotFoundException;
+import com.healthwallet.model.AccessStatus;
 import com.healthwallet.security.JwtService;
 import com.healthwallet.security.SecurityConfig;
 import com.healthwallet.security.UserDetailsServiceImpl;
@@ -26,6 +29,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -208,6 +212,82 @@ class DoctorAccessControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
+    // ── PATCH renovar ───────────────────────────────────────────────────────────
+
+    @Test
+    void renew_returns200_whenAccessIsRenewed() throws Exception {
+        UUID accessId = UUID.randomUUID();
+        DoctorAccessResponse response = buildResponse(UUID.randomUUID(), UUID.randomUUID());
+
+        when(doctorAccessService.renewAccess(eq(accessId), any())).thenReturn(response);
+
+        mockMvc.perform(patch("/api/permissoes/{accessId}/renovar", accessId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(buildRenewRequest())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ACTIVE"));
+    }
+
+    @Test
+    void renew_returns400_whenExpiresAtIsNull() throws Exception {
+        UUID accessId = UUID.randomUUID();
+        RenewAccessRequest request = new RenewAccessRequest();
+
+        mockMvc.perform(patch("/api/permissoes/{accessId}/renovar", accessId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.campos.expiresAt").exists());
+    }
+
+    @Test
+    void renew_returns400_whenAccessIsRevoked() throws Exception {
+        UUID accessId = UUID.randomUUID();
+        when(doctorAccessService.renewAccess(eq(accessId), any()))
+                .thenThrow(new CannotRenewRevokedAccessException(accessId));
+
+        mockMvc.perform(patch("/api/permissoes/{accessId}/renovar", accessId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(buildRenewRequest())))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void renew_returns404_whenAccessDoesNotExist() throws Exception {
+        UUID accessId = UUID.randomUUID();
+        when(doctorAccessService.renewAccess(eq(accessId), any()))
+                .thenThrow(new SharedAccessNotFoundException(accessId));
+
+        mockMvc.perform(patch("/api/permissoes/{accessId}/renovar", accessId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(buildRenewRequest())))
+                .andExpect(status().isNotFound());
+    }
+
+    // ── GET status ──────────────────────────────────────────────────────────────
+
+    @Test
+    void getStatus_returns200_withStatus() throws Exception {
+        UUID accessId = UUID.randomUUID();
+        DoctorAccessResponse response = buildResponse(UUID.randomUUID(), UUID.randomUUID());
+
+        when(doctorAccessService.getById(accessId)).thenReturn(response);
+
+        mockMvc.perform(get("/api/permissoes/{accessId}", accessId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ACTIVE"));
+    }
+
+    @Test
+    void getStatus_returns404_whenAccessDoesNotExist() throws Exception {
+        UUID accessId = UUID.randomUUID();
+        when(doctorAccessService.getById(accessId))
+                .thenThrow(new SharedAccessNotFoundException(accessId));
+
+        mockMvc.perform(get("/api/permissoes/{accessId}", accessId))
+                .andExpect(status().isNotFound());
+    }
+
     // ── HELPERS ───────────────────────────────────────────────────────────────
 
     private GrantDoctorAccessRequest buildRequest(UUID patientId, UUID doctorId) {
@@ -216,6 +296,12 @@ class DoctorAccessControllerTest {
         r.setDoctorId(doctorId);
         r.setDataTypes("ANAMNESIS,VACCINES");
         r.setExpiresAt(LocalDateTime.now().plusDays(30));
+        return r;
+    }
+
+    private RenewAccessRequest buildRenewRequest() {
+        RenewAccessRequest r = new RenewAccessRequest();
+        r.setExpiresAt(LocalDateTime.now().plusDays(60));
         return r;
     }
 
@@ -229,7 +315,8 @@ class DoctorAccessControllerTest {
                 "ANAMNESIS,VACCINES",
                 LocalDateTime.now(),
                 LocalDateTime.now().plusDays(30),
-                false
+                false,
+                AccessStatus.ACTIVE
         );
     }
 }

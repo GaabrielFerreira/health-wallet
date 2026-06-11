@@ -2,22 +2,27 @@ package com.healthwallet.service;
 
 import com.healthwallet.dto.DoctorAccessResponse;
 import com.healthwallet.dto.GrantDoctorAccessRequest;
+import com.healthwallet.dto.RenewAccessRequest;
+import com.healthwallet.exception.CannotRenewRevokedAccessException;
 import com.healthwallet.exception.DoctorAccessAlreadyGrantedException;
 import com.healthwallet.exception.DoctorNotFoundException;
 import com.healthwallet.exception.InvalidDoctorRoleException;
 import com.healthwallet.exception.PatientNotFoundException;
 import com.healthwallet.exception.SharedAccessNotFoundException;
+import com.healthwallet.model.AccessStatus;
 import com.healthwallet.model.Role;
 import com.healthwallet.model.SharedReport;
 import com.healthwallet.model.User;
 import com.healthwallet.repository.SharedReportRepository;
 import com.healthwallet.repository.UserRepository;
+import com.healthwallet.service.access.AccessExpirationPolicy;
 import com.healthwallet.service.validation.DoctorValidator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
@@ -41,6 +46,10 @@ class DoctorAccessServiceTest {
 
     @Mock
     private DoctorValidator doctorValidator;
+
+    // policy é lógica pura — usamos a instância real via @Spy
+    @Spy
+    private AccessExpirationPolicy expirationPolicy = new AccessExpirationPolicy();
 
     @InjectMocks
     private DoctorAccessService service;
@@ -209,6 +218,7 @@ class DoctorAccessServiceTest {
         access.setPatient(patient);
         access.setDoctor(doctor);
         access.setRevoked(false);
+        access.setExpiresAt(LocalDateTime.now().plusDays(10));
 
         when(doctorValidator.validateAndGet(doctorId)).thenReturn(doctor);
         when(sharedReportRepository.findByDoctorIdAndRevokedFalseOrderByCreatedAtDesc(doctorId))
@@ -218,9 +228,152 @@ class DoctorAccessServiceTest {
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getPatientId()).isEqualTo(patient.getId());
+        assertThat(result.get(0).getStatus()).isEqualTo(AccessStatus.ACTIVE);
+    }
+
+    @Test
+    void listActiveByDoctor_excludesExpiredAccesses() {
+        UUID doctorId = UUID.randomUUID();
+        User doctor = buildUser(doctorId, Role.DOCTOR, "Dra. Ana");
+        User patient = buildUser(UUID.randomUUID(), Role.PATIENT, "João");
+
+        SharedReport activeAccess = new SharedReport();
+        activeAccess.setId(UUID.randomUUID());
+        activeAccess.setPatient(patient);
+        activeAccess.setDoctor(doctor);
+        activeAccess.setRevoked(false);
+        activeAccess.setExpiresAt(LocalDateTime.now().plusDays(5));
+
+        SharedReport expiredAccess = new SharedReport();
+        expiredAccess.setId(UUID.randomUUID());
+        expiredAccess.setPatient(patient);
+        expiredAccess.setDoctor(doctor);
+        expiredAccess.setRevoked(false);
+        expiredAccess.setExpiresAt(LocalDateTime.now().minusMinutes(1));
+
+        when(doctorValidator.validateAndGet(doctorId)).thenReturn(doctor);
+        when(sharedReportRepository.findByDoctorIdAndRevokedFalseOrderByCreatedAtDesc(doctorId))
+                .thenReturn(List.of(activeAccess, expiredAccess));
+
+        List<DoctorAccessResponse> result = service.listActiveByDoctor(doctorId);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getId()).isEqualTo(activeAccess.getId());
+    }
+
+    // ── RENEW ─────────────────────────────────────────────────────────────────
+
+    @Test
+    void renewAccess_updatesExpiration_whenAccessIsNotRevoked() {
+        UUID accessId = UUID.randomUUID();
+        User patient = buildUser(UUID.randomUUID(), Role.PATIENT, "João");
+        User doctor = buildUser(UUID.randomUUID(), Role.DOCTOR, "Dra. Ana");
+
+        SharedReport access = new SharedReport();
+        access.setId(accessId);
+        access.setPatient(patient);
+        access.setDoctor(doctor);
+        access.setRevoked(false);
+        access.setExpiresAt(LocalDateTime.now().plusDays(1));
+
+        LocalDateTime newExpiry = LocalDateTime.now().plusDays(60);
+        RenewAccessRequest request = new RenewAccessRequest();
+        request.setExpiresAt(newExpiry);
+
+        when(sharedReportRepository.findById(accessId)).thenReturn(Optional.of(access));
+        when(sharedReportRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        DoctorAccessResponse response = service.renewAccess(accessId, request);
+
+        assertThat(response.getExpiresAt()).isEqualTo(newExpiry);
+        assertThat(response.getStatus()).isEqualTo(AccessStatus.ACTIVE);
+    }
+
+    @Test
+    void renewAccess_throwsCannotRenewRevoked_whenAccessIsRevoked() {
+        UUID accessId = UUID.randomUUID();
+        SharedReport access = new SharedReport();
+        access.setId(accessId);
+        access.setRevoked(true);
+
+        RenewAccessRequest request = new RenewAccessRequest();
+        request.setExpiresAt(LocalDateTime.now().plusDays(30));
+
+        when(sharedReportRepository.findById(accessId)).thenReturn(Optional.of(access));
+
+        assertThatThrownBy(() -> service.renewAccess(accessId, request))
+                .isInstanceOf(CannotRenewRevokedAccessException.class);
+
+        verify(sharedReportRepository, never()).save(any());
+    }
+
+    @Test
+    void renewAccess_throwsSharedAccessNotFound_whenAccessMissing() {
+        UUID accessId = UUID.randomUUID();
+        RenewAccessRequest request = new RenewAccessRequest();
+        request.setExpiresAt(LocalDateTime.now().plusDays(30));
+
+        when(sharedReportRepository.findById(accessId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.renewAccess(accessId, request))
+                .isInstanceOf(SharedAccessNotFoundException.class);
+    }
+
+    // ── STATUS (getById) ──────────────────────────────────────────────────────
+
+    @Test
+    void getById_returnsRevokedStatus_whenAccessIsRevoked() {
+        UUID accessId = UUID.randomUUID();
+        SharedReport access = buildLinkedAccess(accessId);
+        access.setRevoked(true);
+
+        when(sharedReportRepository.findById(accessId)).thenReturn(Optional.of(access));
+
+        assertThat(service.getById(accessId).getStatus()).isEqualTo(AccessStatus.REVOKED);
+    }
+
+    @Test
+    void getById_returnsExpiredStatus_whenAccessIsExpired() {
+        UUID accessId = UUID.randomUUID();
+        SharedReport access = buildLinkedAccess(accessId);
+        access.setRevoked(false);
+        access.setExpiresAt(LocalDateTime.now().minusMinutes(1));
+
+        when(sharedReportRepository.findById(accessId)).thenReturn(Optional.of(access));
+
+        assertThat(service.getById(accessId).getStatus()).isEqualTo(AccessStatus.EXPIRED);
+    }
+
+    @Test
+    void getById_returnsActiveStatus_whenAccessIsActive() {
+        UUID accessId = UUID.randomUUID();
+        SharedReport access = buildLinkedAccess(accessId);
+        access.setRevoked(false);
+        access.setExpiresAt(LocalDateTime.now().plusDays(3));
+
+        when(sharedReportRepository.findById(accessId)).thenReturn(Optional.of(access));
+
+        assertThat(service.getById(accessId).getStatus()).isEqualTo(AccessStatus.ACTIVE);
+    }
+
+    @Test
+    void getById_throwsSharedAccessNotFound_whenAccessMissing() {
+        UUID accessId = UUID.randomUUID();
+        when(sharedReportRepository.findById(accessId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.getById(accessId))
+                .isInstanceOf(SharedAccessNotFoundException.class);
     }
 
     // ── HELPERS ───────────────────────────────────────────────────────────────
+
+    private SharedReport buildLinkedAccess(UUID accessId) {
+        SharedReport access = new SharedReport();
+        access.setId(accessId);
+        access.setPatient(buildUser(UUID.randomUUID(), Role.PATIENT, "João"));
+        access.setDoctor(buildUser(UUID.randomUUID(), Role.DOCTOR, "Dra. Ana"));
+        return access;
+    }
 
     private User buildUser(UUID id, Role role, String name) {
         User u = new User();

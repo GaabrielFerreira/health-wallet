@@ -2,6 +2,8 @@ package com.healthwallet.service;
 
 import com.healthwallet.dto.DoctorAccessResponse;
 import com.healthwallet.dto.GrantDoctorAccessRequest;
+import com.healthwallet.dto.RenewAccessRequest;
+import com.healthwallet.exception.CannotRenewRevokedAccessException;
 import com.healthwallet.exception.DoctorAccessAlreadyGrantedException;
 import com.healthwallet.exception.PatientNotFoundException;
 import com.healthwallet.exception.SharedAccessNotFoundException;
@@ -9,6 +11,7 @@ import com.healthwallet.model.SharedReport;
 import com.healthwallet.model.User;
 import com.healthwallet.repository.SharedReportRepository;
 import com.healthwallet.repository.UserRepository;
+import com.healthwallet.service.access.AccessExpirationPolicy;
 import com.healthwallet.service.validation.DoctorValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,12 +22,13 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * Service responsável por gerenciar permissões de acesso de médicos a dados de pacientes
- * (SCRUM-50). Concede, revoga e lista permissões.
+ * Service responsável por gerenciar permissões de acesso de médicos a dados de pacientes.
+ * SCRUM-50: conceder, revogar e listar. SCRUM-52: renovar expiração e consultar status.
  *
  * Aplica SOLID:
- * - SRP: cuida apenas do controle de permissões. Validações isoladas em DoctorValidator.
- * - DIP: depende das abstrações DoctorValidator + repositórios.
+ * - SRP: cuida do ciclo de vida da permissão. Validação de médico em DoctorValidator,
+ *   regra de expiração em AccessExpirationPolicy.
+ * - DIP: depende das abstrações DoctorValidator, AccessExpirationPolicy e repositórios.
  */
 @Service
 @RequiredArgsConstructor
@@ -33,6 +37,7 @@ public class DoctorAccessService {
     private final SharedReportRepository sharedReportRepository;
     private final UserRepository userRepository;
     private final DoctorValidator doctorValidator;
+    private final AccessExpirationPolicy expirationPolicy;
 
     @Transactional
     public DoctorAccessResponse grantAccess(GrantDoctorAccessRequest request) {
@@ -65,6 +70,25 @@ public class DoctorAccessService {
         sharedReportRepository.save(access);
     }
 
+    @Transactional
+    public DoctorAccessResponse renewAccess(UUID accessId, RenewAccessRequest request) {
+        SharedReport access = sharedReportRepository.findById(accessId)
+                .orElseThrow(() -> new SharedAccessNotFoundException(accessId));
+
+        if (Boolean.TRUE.equals(access.getRevoked())) {
+            throw new CannotRenewRevokedAccessException(accessId);
+        }
+
+        access.setExpiresAt(request.getExpiresAt());
+        return toResponse(sharedReportRepository.save(access));
+    }
+
+    public DoctorAccessResponse getById(UUID accessId) {
+        SharedReport access = sharedReportRepository.findById(accessId)
+                .orElseThrow(() -> new SharedAccessNotFoundException(accessId));
+        return toResponse(access);
+    }
+
     public List<DoctorAccessResponse> listByPatient(UUID patientId) {
         userRepository.findById(patientId)
                 .orElseThrow(() -> new PatientNotFoundException(patientId));
@@ -82,6 +106,7 @@ public class DoctorAccessService {
         return sharedReportRepository
                 .findByDoctorIdAndRevokedFalseOrderByCreatedAtDesc(doctorId)
                 .stream()
+                .filter(expirationPolicy::isActive)
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }
@@ -97,7 +122,8 @@ public class DoctorAccessService {
                 access.getDataTypes(),
                 access.getCreatedAt(),
                 access.getExpiresAt(),
-                access.getRevoked()
+                access.getRevoked(),
+                expirationPolicy.statusOf(access)
         );
     }
 }

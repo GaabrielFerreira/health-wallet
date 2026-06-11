@@ -164,4 +164,13 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
     }
+
+    @ExceptionHandler(CannotRenewRevokedAccessException.class)
+    public ResponseEntity<Map<String, Object>> handleCannotRenewRevokedAccess(CannotRenewRevokedAccessException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("status", 400);
+        body.put("erro", ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
 }

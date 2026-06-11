@@ -1,5 +1,6 @@
 package com.healthwallet.dto;
 
+import com.healthwallet.model.AccessStatus;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
@@ -19,4 +20,5 @@ public class DoctorAccessResponse {
     private LocalDateTime grantedAt;
     private LocalDateTime expiresAt;
     private Boolean revoked;
+    private AccessStatus status;
 }

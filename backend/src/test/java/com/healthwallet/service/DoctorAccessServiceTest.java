@@ -1,6 +1,7 @@
 package com.healthwallet.service;
 
 import com.healthwallet.dto.DoctorAccessResponse;
+import com.healthwallet.dto.DoctorLookupResponse;
 import com.healthwallet.dto.GrantDoctorAccessRequest;
 import com.healthwallet.dto.RenewAccessRequest;
 import com.healthwallet.exception.CannotRenewRevokedAccessException;
@@ -363,6 +364,37 @@ class DoctorAccessServiceTest {
 
         assertThatThrownBy(() -> service.getById(accessId))
                 .isInstanceOf(SharedAccessNotFoundException.class);
+    }
+
+    // ── FIND DOCTOR BY EMAIL (SCRUM-55) ─────────────────────────────────────────
+
+    @Test
+    void findDoctorByEmail_returnsDoctor_whenEmailBelongsToDoctor() {
+        User doctor = buildUser(UUID.randomUUID(), Role.DOCTOR, "Dra. Ana");
+        when(userRepository.findByEmail(doctor.getEmail())).thenReturn(Optional.of(doctor));
+
+        DoctorLookupResponse response = service.findDoctorByEmail(doctor.getEmail());
+
+        assertThat(response.getId()).isEqualTo(doctor.getId());
+        assertThat(response.getName()).isEqualTo("Dra. Ana");
+        assertThat(response.getEmail()).isEqualTo(doctor.getEmail());
+    }
+
+    @Test
+    void findDoctorByEmail_throwsDoctorNotFound_whenEmailNotFound() {
+        when(userRepository.findByEmail("naoexiste@email.com")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.findDoctorByEmail("naoexiste@email.com"))
+                .isInstanceOf(DoctorNotFoundException.class);
+    }
+
+    @Test
+    void findDoctorByEmail_throwsInvalidDoctorRole_whenUserIsNotDoctor() {
+        User patient = buildUser(UUID.randomUUID(), Role.PATIENT, "João");
+        when(userRepository.findByEmail(patient.getEmail())).thenReturn(Optional.of(patient));
+
+        assertThatThrownBy(() -> service.findDoctorByEmail(patient.getEmail()))
+                .isInstanceOf(InvalidDoctorRoleException.class);
     }
 
     // ── HELPERS ───────────────────────────────────────────────────────────────

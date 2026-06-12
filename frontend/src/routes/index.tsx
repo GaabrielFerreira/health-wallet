@@ -6,6 +6,8 @@ import { LandingPage } from "../pages/LandingPage";
 import { VaccinesPage } from "../pages/VaccinesPage";
 import { ConsultasPage } from "../pages/ConsultasPage";
 import { ReportsPage } from "../pages/ReportsPage";
+import { SharingPage } from "../pages/SharingPage";
+import { DoctorPatientsPage } from "../pages/DoctorPatientsPage";
 import { DashboardPage } from "../pages/DashboardPage";
 import { useAuth } from "../context/AuthContext";
 import type { ReactNode } from "react";
@@ -59,6 +61,22 @@ export function AppRoutes() {
           element={
             <PrivateRoute>
               <ReportsPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/compartilhamento"
+          element={
+            <PrivateRoute>
+              <SharingPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/meus-pacientes"
+          element={
+            <PrivateRoute>
+              <DoctorPatientsPage />
             </PrivateRoute>
           }
         />

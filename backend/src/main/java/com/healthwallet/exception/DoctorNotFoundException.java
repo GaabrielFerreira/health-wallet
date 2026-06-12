@@ -6,4 +6,8 @@ public class DoctorNotFoundException extends RuntimeException {
     public DoctorNotFoundException(UUID doctorId) {
         super("Médico não encontrado: " + doctorId);
     }
+
+    public DoctorNotFoundException(String email) {
+        super("Médico não encontrado: " + email);
+    }
 }

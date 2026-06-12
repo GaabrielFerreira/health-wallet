@@ -1,12 +1,16 @@
 package com.healthwallet.service;
 
 import com.healthwallet.dto.DoctorAccessResponse;
+import com.healthwallet.dto.DoctorLookupResponse;
 import com.healthwallet.dto.GrantDoctorAccessRequest;
 import com.healthwallet.dto.RenewAccessRequest;
 import com.healthwallet.exception.CannotRenewRevokedAccessException;
 import com.healthwallet.exception.DoctorAccessAlreadyGrantedException;
+import com.healthwallet.exception.DoctorNotFoundException;
+import com.healthwallet.exception.InvalidDoctorRoleException;
 import com.healthwallet.exception.PatientNotFoundException;
 import com.healthwallet.exception.SharedAccessNotFoundException;
+import com.healthwallet.model.Role;
 import com.healthwallet.model.SharedReport;
 import com.healthwallet.model.User;
 import com.healthwallet.repository.SharedReportRepository;
@@ -87,6 +91,17 @@ public class DoctorAccessService {
         SharedReport access = sharedReportRepository.findById(accessId)
                 .orElseThrow(() -> new SharedAccessNotFoundException(accessId));
         return toResponse(access);
+    }
+
+    public DoctorLookupResponse findDoctorByEmail(String email) {
+        User user = userRepository.findByEmail(email.trim())
+                .orElseThrow(() -> new DoctorNotFoundException(email));
+
+        if (user.getRole() != Role.DOCTOR) {
+            throw new InvalidDoctorRoleException(user.getId());
+        }
+
+        return new DoctorLookupResponse(user.getId(), user.getName(), user.getEmail());
     }
 
     public List<DoctorAccessResponse> listByPatient(UUID patientId) {

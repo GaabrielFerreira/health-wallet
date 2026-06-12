@@ -1,6 +1,7 @@
 package com.healthwallet.controller;
 
 import com.healthwallet.dto.DoctorAccessResponse;
+import com.healthwallet.dto.DoctorLookupResponse;
 import com.healthwallet.dto.GrantDoctorAccessRequest;
 import com.healthwallet.dto.RenewAccessRequest;
 import com.healthwallet.service.DoctorAccessService;
@@ -42,6 +43,21 @@ public class DoctorAccessController {
     @PostMapping
     public ResponseEntity<DoctorAccessResponse> grant(@Valid @RequestBody GrantDoctorAccessRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(doctorAccessService.grantAccess(request));
+    }
+
+    @Operation(summary = "Buscar médico por email",
+        description = "Resolve o email de um médico cadastrado para seus dados básicos. Usado pelo paciente ao conceder acesso sem precisar do ID interno")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Médico encontrado",
+            content = @Content(schema = @Schema(implementation = DoctorLookupResponse.class))),
+        @ApiResponse(responseCode = "400", description = "O email informado não pertence a um médico",
+            content = @Content(schema = @Schema(implementation = Object.class))),
+        @ApiResponse(responseCode = "404", description = "Médico não encontrado",
+            content = @Content(schema = @Schema(implementation = Object.class)))
+    })
+    @GetMapping("/medico-por-email")
+    public ResponseEntity<DoctorLookupResponse> findDoctorByEmail(@RequestParam String email) {
+        return ResponseEntity.ok(doctorAccessService.findDoctorByEmail(email));
     }
 
     @Operation(summary = "Revogar acesso de um médico",

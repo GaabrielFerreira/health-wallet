@@ -3,9 +3,10 @@ package com.healthwallet.service.validation;
 import com.healthwallet.exception.UnauthorizedDoctorAccessException;
 import com.healthwallet.model.SharedReport;
 import com.healthwallet.repository.SharedReportRepository;
+import com.healthwallet.service.access.AccessExpirationPolicy;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -24,8 +25,13 @@ class DoctorAccessValidatorTest {
     @Mock
     private SharedReportRepository sharedReportRepository;
 
-    @InjectMocks
     private DoctorAccessValidator validator;
+
+    @BeforeEach
+    void setUp() {
+        // policy é lógica pura determinística — usamos a instância real
+        validator = new DoctorAccessValidator(sharedReportRepository, new AccessExpirationPolicy());
+    }
 
     @Test
     void requireActiveAccess_doesNotThrow_whenAccessIsActiveAndNotExpired() {

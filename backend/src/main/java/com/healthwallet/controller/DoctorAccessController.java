@@ -2,6 +2,7 @@ package com.healthwallet.controller;
 
 import com.healthwallet.dto.DoctorAccessResponse;
 import com.healthwallet.dto.GrantDoctorAccessRequest;
+import com.healthwallet.dto.RenewAccessRequest;
 import com.healthwallet.service.DoctorAccessService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -56,8 +57,37 @@ public class DoctorAccessController {
         return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "Renovar expiração de uma permissão",
+        description = "Estende a data de expiração de uma permissão ativa (não revogada)")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Permissão renovada com sucesso",
+            content = @Content(schema = @Schema(implementation = DoctorAccessResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Permissão revogada não pode ser renovada ou data inválida",
+            content = @Content(schema = @Schema(implementation = Object.class))),
+        @ApiResponse(responseCode = "404", description = "Permissão não encontrada",
+            content = @Content(schema = @Schema(implementation = Object.class)))
+    })
+    @PatchMapping("/{accessId}/renovar")
+    public ResponseEntity<DoctorAccessResponse> renew(@PathVariable UUID accessId,
+                                                      @Valid @RequestBody RenewAccessRequest request) {
+        return ResponseEntity.ok(doctorAccessService.renewAccess(accessId, request));
+    }
+
+    @Operation(summary = "Consultar status de uma permissão",
+        description = "Retorna o estado atual da permissão (ACTIVE, EXPIRED ou REVOKED)")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Status retornado com sucesso",
+            content = @Content(schema = @Schema(implementation = DoctorAccessResponse.class))),
+        @ApiResponse(responseCode = "404", description = "Permissão não encontrada",
+            content = @Content(schema = @Schema(implementation = Object.class)))
+    })
+    @GetMapping("/{accessId}")
+    public ResponseEntity<DoctorAccessResponse> getStatus(@PathVariable UUID accessId) {
+        return ResponseEntity.ok(doctorAccessService.getById(accessId));
+    }
+
     @Operation(summary = "Listar permissões concedidas pelo paciente",
-        description = "Retorna todas as permissões (ativas e revogadas) que o paciente já concedeu")
+        description = "Retorna todas as permissões (ativas, expiradas e revogadas) que o paciente já concedeu")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso"),
         @ApiResponse(responseCode = "404", description = "Paciente não encontrado",

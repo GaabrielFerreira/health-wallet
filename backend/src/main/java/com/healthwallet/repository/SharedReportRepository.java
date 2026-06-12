@@ -16,4 +16,6 @@ public interface SharedReportRepository extends JpaRepository<SharedReport, UUID
     List<SharedReport> findByDoctorIdAndRevokedFalseOrderByCreatedAtDesc(UUID doctorId);
 
     boolean existsByPatientIdAndDoctorIdAndRevokedFalse(UUID patientId, UUID doctorId);
+
+    Optional<SharedReport> findByTokenAndRevokedFalse(UUID token);
 }

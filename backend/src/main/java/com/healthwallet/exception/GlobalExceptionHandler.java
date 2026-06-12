@@ -173,4 +173,13 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
+
+    @ExceptionHandler(InvalidShareTokenException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidShareToken(InvalidShareTokenException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("status", 403);
+        body.put("erro", ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
+    }
 }

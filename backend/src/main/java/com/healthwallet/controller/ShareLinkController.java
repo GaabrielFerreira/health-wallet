@@ -43,7 +43,8 @@ public class ShareLinkController {
 
     @Operation(
         summary = "Acessar dados via token",
-        description = "Endpoint público. Qualquer portador do token válido (não expirado e não revogado) acessa os dados consolidados do paciente."
+        description = "Endpoint público. Qualquer portador do token válido (não expirado e não revogado) acessa os dados consolidados do paciente.",
+        security = {}
     )
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Dados retornados com sucesso",

@@ -23,7 +23,7 @@ public class UserController {
 
     private final AuthService authService;
 
-    @Operation(summary = "Registrar novo usuário", description = "Cria uma nova conta de usuário no sistema")
+    @Operation(summary = "Registrar novo usuário", description = "Cria uma nova conta de usuário no sistema", security = {})
     @ApiResponses({
         @ApiResponse(responseCode = "201", description = "Usuário criado com sucesso",
             content = @Content(schema = @Schema(implementation = RegisterResponse.class))),
